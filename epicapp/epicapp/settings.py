@@ -77,14 +77,16 @@ WSGI_APPLICATION = 'epicapp.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/4.1/ref/settings/#databases
 
+print(env('EPICAPP_DB_HOST'), env('EPICAPP_DB_NAME'), env('EPICAPP_DB_USER'))
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'HOST': env('HOST'),
-        'NAME': env('NAME'),
-        'USER': env('USER'),
-        'PASSWORD': env('PASSWORD'),
-        'PORT': env('PORT'),
+        'HOST': env('EPICAPP_DB_HOST'),
+        'NAME': env('EPICAPP_DB_NAME'),
+        'USER': env('EPICAPP_DB_USER'),
+        'PASSWORD': env('EPICAPP_DB_PASSWORD'),
+        'PORT': env('EPICAPP_DB_PORT'),
     }
 }
 
