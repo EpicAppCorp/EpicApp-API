@@ -4,7 +4,7 @@ Instagram but more epic
 
 # Setup
 
-- Preqreqs: Python3 installed on your system
+- Preqreqs: Python3 installed on your system and `.env` with secret strings
 
 1. Clone repo with `git clone git@github.com:CMPUT404-GROUP-PROJ/EpicApp-API.git`
 2. `cd` into repo
