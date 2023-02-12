@@ -3,7 +3,7 @@ from rest_framework.response import Response
 from rest_framework import serializers, status
 from django.http import JsonResponse
 
-from .models import Author
+from .models import Author, Post
 from .serializers import AuthorSerializer, PostSerializer
 
 @api_view((['POST']))
@@ -30,17 +30,24 @@ def get_author(request, id):
 def get_authors(request):
     return Response(data="get many authors")
 
-@api_view(['POST'])
-def create_post(request, author_id):
+@api_view(['POST', 'GET'])
+def posts(request, author_id):
     # TODO: authorization check
     # TODO: permission check
-    post_data = request.data
-    post_data["author_id"] = author_id
-    post = PostSerializer(data=post_data)
-    
-    if not post.is_valid():
-        return Response(data=post.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    post.save()
+    if request.method == 'POST':
+        post_data = request.data
+        post_data["author_id"] = author_id
+        post = PostSerializer(data=post_data)
+        
+        if not post.is_valid():
+            return Response(data=post.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    return Response(data=post.data)
+        post.save()
+
+        return Response(data=post.data)
+
+    elif request.method == 'GET':
+        posts = Post.objects.filter(author_id=author_id)
+        serialized_posts = PostSerializer(posts, many=True)
+        return Response(data=serialized_posts.data)
