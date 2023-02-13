@@ -49,7 +49,14 @@ def posts(request, author_id):
         return Response(data=post.data)
 
     elif request.method == 'GET':
-        posts = Post.objects.filter(author_id=author_id)
+        page = int(request.GET.get('page', 1))
+        size = int(request.GET.get('size', 0))
+
+        if size <= 0:
+            return Response(data="missing size query parameter", status=status.HTTP_400_BAD_REQUEST) 
+
+        offset = (page - 1) * size
+        posts = Post.objects.filter(author_id=author_id)[offset:offset+size]
         serialized_posts = PostSerializer(posts, many=True)
         return Response(data=serialized_posts.data)
 
