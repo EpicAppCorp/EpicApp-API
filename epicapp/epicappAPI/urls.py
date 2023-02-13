@@ -8,5 +8,6 @@ urlpatterns = [
     path('authors/', views.get_authors, name='get_authors'),
 
     # post paths
-    path('authors/<str:author_id>/posts/', views.posts, name='posts endpoint')
+    path('authors/<str:author_id>/posts/', views.posts, name='posts endpoint'),
+    path('authors/<str:author_id>/posts/<str:post_id>/', views.post, name="post endpoint")
 ]
