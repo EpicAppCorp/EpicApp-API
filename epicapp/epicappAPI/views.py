@@ -7,8 +7,8 @@ from .models import Author
 from .serializers import AuthorSerializer
 
 @api_view((['POST']))
-def signup(request):
-    author_data = request.data
+def register(request):
+    # author_data = request.data
     author = AuthorSerializer(data=request.data)
 
     if not author.is_valid():
