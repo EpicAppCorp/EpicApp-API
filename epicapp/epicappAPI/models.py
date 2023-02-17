@@ -9,7 +9,6 @@ class Author(AbstractUser):
     host = models.CharField(max_length=255)
     displayName = models.CharField(unique=True, max_length=36)
     url = models.CharField(max_length=255)
-    # email = models.EmailField(unique=True, max_length=64)
     password = models.CharField(max_length=255)
     github = models.CharField(unique=True, max_length=255)
     profile_image = models.TextField()
