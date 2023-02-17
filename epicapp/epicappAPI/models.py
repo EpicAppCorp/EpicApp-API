@@ -1,6 +1,7 @@
 import uuid
 
 from django.db import models
+from django.contrib.postgres.fields import ArrayField
 from django.contrib.auth.models import AbstractUser
 
 class Author(AbstractUser):
@@ -23,16 +24,36 @@ class Author(AbstractUser):
     REQUIRED_FIELDS = []
 
 class Post(models.Model):
-    class PostType(models.TextChoices):
-        IMG_URL = 'IU' # img url: https://something.com/img.png
-        IMG = 'IM' # base 64 image
-        TEXT = 'TX'
-        COMMON_MARK = 'CM'
+    @property
+    def type(self):
+        return 'post'
+
+    class ContentType(models.TextChoices): 
+        textMarkdown = 'text/markdown'
+        textPlain = 'text/plain'
+        # various image types
+        appImg = 'application/base64'
+        pngImg = 'image/png;base64'
+        jpegImg = 'image/jpeg;base64'
+    
+    class Visibility(models.TextChoices):
+        PUBLIC = 'PUBLIC'
+        PRIVATE = 'PRIVATE'
  
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    data = models.TextField()
-    type = models.CharField(max_length=2, choices=PostType.choices,)
-    date = models.DateField(auto_now_add=True)
+    title = models.CharField(max_length=50)
+    source = models.CharField(max_length=255)
+    origin = models.CharField(max_length=255)
+    description = models.TextField(max_length=500, blank=True)
+    content = models.TextField()
+    contentType = models.CharField(max_length=18, choices=ContentType.choices)
+    published = models.DateTimeField(auto_now_add=True)
+    visibility = models.CharField(max_length=7, choices=Visibility.choices, default=Visibility.PUBLIC)
+    categories = ArrayField(
+        models.CharField(max_length=24),
+        default=list
+    )
+    unlisted = models.BooleanField(default=False)
     author = models.ForeignKey(Author, on_delete=models.CASCADE)
 
 
