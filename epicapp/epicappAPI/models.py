@@ -53,6 +53,9 @@ class Post(models.Model):
     unlisted = models.BooleanField(default=False)
     author = models.ForeignKey(Author, on_delete=models.CASCADE)
 
+    def post_id():
+        id = uuid.uuid4()
+        return f'https://localhost:8000/authors{id}'
 
 class Comment(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
