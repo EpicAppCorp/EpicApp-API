@@ -8,8 +8,9 @@ from rest_framework.exceptions import APIException, NotFound
 from rest_framework import serializers, status
 from django.http import JsonResponse
 
-from .models import Author, Post
-from .serializers import AuthorSerializer, PostSerializer
+from .models import Author, Post, Comment
+from .config import HOST
+from .serializers import AuthorSerializer, PostSerializer, CommentSerializer
 
 
 @api_view((['POST']))
@@ -169,3 +170,49 @@ def post(request, author_id, post_id):
         if affected_rows[0] == 0:
             return Response(data=f"could not delete post with id \'{post_id}\'", status=status.HTTP_404_NOT_FOUND)
         return Response(data=affected_rows[0])
+
+@api_view(['POST', 'GET'])
+def comments(request, author_id, post_id):
+    # TODO: authorization check
+    # TODO: permission check
+    
+    if request.method == 'GET':
+        try:
+            page = int(request.GET.get('page', 1))
+            size = int(request.GET.get('size', 5))
+
+            author = Author.objects.get(id=author_id)
+            post = Post.objects.get(id=post_id)
+
+            offset = (page - 1) * size
+            comments = Comment.objects.filter(post_id=post_id)[offset:offset+size]
+            serialized_comments = CommentSerializer(comments, many=True)
+
+            data = {
+                "type": "comments",
+                "page": page,
+                "size": size,
+                "post": f"{HOST}/authors/{author_id}/posts/{post_id}",
+                "id": f"{HOST}/authors/{author_id}/posts/{post_id}/comments",
+                "comments": serialized_comments.data
+            }
+
+            return Response(data=data)
+
+        except Author.DoesNotExist:
+            return Response(data=f"Author with id: {author_id} does not exist", status=status.HTTP_404_NOT_FOUND)
+        except Post.DoesNotExist:
+            return Response(data=f"Post with id: {post_id} does not exist", status=status.HTTP_404_NOT_FOUND)
+        
+    if request.method == 'POST':
+        comment_data = request.data
+        comment_data["post_id"] = post_id
+        comment_data["author_id"] = author_id
+        comment = CommentSerializer(data=comment_data)
+
+        if not comment.is_valid():
+            return Response(data=comment.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        comment.save()
+
+        return Response(data=comment.data)

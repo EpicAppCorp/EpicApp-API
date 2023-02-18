@@ -53,15 +53,13 @@ class Post(models.Model):
     unlisted = models.BooleanField(default=False)
     author = models.ForeignKey(Author, on_delete=models.CASCADE)
 
-    def post_id():
-        id = uuid.uuid4()
-        return f'https://localhost:8000/authors{id}'
-
 class Comment(models.Model):
+    type = "comment"
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     comment = models.TextField(max_length=500)
-    date = models.DateField(auto_now_add=True)
-    comment = models.ForeignKey(Post, on_delete=models.CASCADE)
+    contentType = "text/markdown" # not sure if this can be anything else
+    published = models.DateTimeField(auto_now_add=True)
+    post = models.ForeignKey(Post, on_delete=models.CASCADE)
     author = models.ForeignKey(Author, on_delete=models.CASCADE)
 
 # todo:
