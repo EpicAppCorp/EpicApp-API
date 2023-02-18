@@ -1,4 +1,5 @@
 import jwt
+import uuid
 import datetime
 
 from rest_framework.decorators import api_view
@@ -109,16 +110,17 @@ def posts(request, author_id):
         return Response(data=post.data)
 
     elif request.method == 'GET':
-        page = int(request.GET.get('page', 1))
-        size = int(request.GET.get('size', 0))
+        try:
+            page = int(request.GET.get('page', 1))
+            size = int(request.GET.get('size', 5))
 
-        if size <= 0:
-            return Response(data="missing size query parameter", status=status.HTTP_400_BAD_REQUEST) 
-
-        offset = (page - 1) * size
-        posts = Post.objects.filter(author_id=author_id)[offset:offset+size]
-        serialized_posts = PostSerializer(posts, many=True)
-        return Response(data=serialized_posts.data)
+            author = Author.objects.get(id=author_id)
+            offset = (page - 1) * size
+            posts = Post.objects.filter(author_id=author_id)[offset:offset+size]
+            serialized_posts = PostSerializer(posts, many=True)
+            return Response(data=serialized_posts.data)
+        except Author.DoesNotExist:
+            return Response(data=f"Author with id: {author_id} does not exist", status=status.HTTP_404_NOT_FOUND)
 
 @api_view(['POST', 'GET', 'DELETE', 'PUT'])
 def post(request, author_id, post_id):
@@ -127,6 +129,7 @@ def post(request, author_id, post_id):
 
     if request.method == 'PUT':
         post_data = request.data
+        post_data["id"] = post_id
         post_data["author_id"] = author_id
         post = PostSerializer(data=post_data)
         
@@ -149,6 +152,7 @@ def post(request, author_id, post_id):
         try:
             post = Post.objects.get(id=post_id)
             post_data = request.data
+            post_data["id"] = post_id
             updated_post = PostSerializer(instance=post, data=post_data, partial=True)
 
             if not updated_post.is_valid():

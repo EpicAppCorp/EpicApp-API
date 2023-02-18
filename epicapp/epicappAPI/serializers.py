@@ -2,6 +2,7 @@ from rest_framework import serializers
 from django.contrib.auth.hashers import make_password
 
 from .models import Author, Post
+from .config import HOST
 
 
 class AuthorSerializer(serializers.ModelSerializer):
@@ -38,7 +39,7 @@ class PostSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         return Post.objects.create(**validated_data)
 
-    def update(self, instance, validated_data):       
+    def update(self, instance, validated_data):
         instance.title = validated_data.get('title', instance.title)
         instance.source = validated_data.get('source', instance.source)
         instance.origin = validated_data.get('origin', instance.origin)
@@ -51,3 +52,8 @@ class PostSerializer(serializers.ModelSerializer):
         instance.unlisted = validated_data.get('unlisted', instance.unlisted)
         instance.save()
         return instance 
+
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        representation['id'] = f"{HOST}/api/authors/{instance.author.id}/posts/{instance.id}"
+        return representation
