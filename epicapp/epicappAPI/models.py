@@ -24,10 +24,6 @@ class Author(AbstractUser):
     REQUIRED_FIELDS = []
 
 class Post(models.Model):
-    @property
-    def type(self):
-        return 'post'
-
     class ContentType(models.TextChoices): 
         textMarkdown = 'text/markdown'
         textPlain = 'text/plain'
@@ -39,8 +35,9 @@ class Post(models.Model):
     class Visibility(models.TextChoices):
         PUBLIC = 'PUBLIC'
         PRIVATE = 'PRIVATE'
- 
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    type = "post"
+    id = models.CharField(primary_key=True, default=uuid.uuid4, max_length=255, unique=True)
     title = models.CharField(max_length=50)
     source = models.CharField(max_length=255)
     origin = models.CharField(max_length=255)
@@ -56,12 +53,13 @@ class Post(models.Model):
     unlisted = models.BooleanField(default=False)
     author = models.ForeignKey(Author, on_delete=models.CASCADE)
 
-
 class Comment(models.Model):
+    type = "comment"
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     comment = models.TextField(max_length=500)
-    date = models.DateField(auto_now_add=True)
-    comment = models.ForeignKey(Post, on_delete=models.CASCADE)
+    contentType = "text/markdown" # not sure if this can be anything else
+    published = models.DateTimeField(auto_now_add=True)
+    post = models.ForeignKey(Post, on_delete=models.CASCADE)
     author = models.ForeignKey(Author, on_delete=models.CASCADE)
 
 # todo:

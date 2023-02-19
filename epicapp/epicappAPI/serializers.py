@@ -1,7 +1,8 @@
 from rest_framework import serializers
 from django.contrib.auth.hashers import make_password
 
-from .models import Author, Post
+from .models import Author, Post, Comment
+from .config import HOST
 
 
 class AuthorSerializer(serializers.ModelSerializer):
@@ -38,7 +39,7 @@ class PostSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         return Post.objects.create(**validated_data)
 
-    def update(self, instance, validated_data):       
+    def update(self, instance, validated_data):
         instance.title = validated_data.get('title', instance.title)
         instance.source = validated_data.get('source', instance.source)
         instance.origin = validated_data.get('origin', instance.origin)
@@ -51,3 +52,33 @@ class PostSerializer(serializers.ModelSerializer):
         instance.unlisted = validated_data.get('unlisted', instance.unlisted)
         instance.save()
         return instance 
+
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        representation['id'] = f"{HOST}/api/authors/{instance.author.id}/posts/{instance.id}"
+        return representation
+
+class CommentSerializer(serializers.ModelSerializer):
+    type = serializers.ReadOnlyField()
+    author = AuthorSerializer(read_only=True)
+    author_id = serializers.CharField(write_only = True)
+    post_id = serializers.CharField(write_only = True)
+
+    class Meta:
+        model = Comment
+        fields = ['id', 'type', 'comment', 'contentType', 'published', 'post_id', 'author', 'author_id']
+
+    def create(self, validated_data):
+        return Comment.objects.create(**validated_data)
+
+    def update(self, instance, validated_data):
+        instance.comment = validated_data.get('comment', instance.comment)
+        instance.published = validated_data.get('published', instance.published)
+        instance.contentType = validated_data.get('contentType', instance.contentType)
+        instance.save()
+        return instance 
+
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        representation['id'] = f"{HOST}/api/authors/{instance.author.id}/posts/{instance.post.id}/comments/{instance.id}"
+        return representation
