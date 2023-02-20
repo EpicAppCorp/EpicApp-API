@@ -62,13 +62,12 @@ class Comment(models.Model):
     post = models.ForeignKey(Post, on_delete=models.CASCADE)
     author = models.ForeignKey(Author, on_delete=models.CASCADE)
 
-# todo:
-# class Friend(models.Model):
-#     id = models.UUIDField(primary_key = True, default = uuid.uuid4, editable = False)
-#     friendId = 
-#     authorAccepted = models.BooleanField(default=False, null=False)
-#     friendAccepted = models.BooleanField(default=False, null=False)
+class PostLike(models.Model):
+    type = "Like"
+    author = models.ForeignKey(Author, on_delete=models.CASCADE)
+    post = models.ForeignKey(Post, on_delete=models.CASCADE)
 
-# Todo:
-# class Inbox(models.Model):
-#     pass
+class CommentLike(models.Model):
+    type = "Like"
+    author = models.ForeignKey(Author, on_delete=models.CASCADE)
+    comment = models.ForeignKey(Comment, on_delete=models.CASCADE)
