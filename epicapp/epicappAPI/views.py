@@ -8,9 +8,9 @@ from rest_framework.exceptions import APIException, NotFound
 from rest_framework import serializers, status
 from django.http import JsonResponse
 
-from .models import Author, Post, Comment
+from .models import Author, Post, Comment, PostLike, CommentLike
 from .config import HOST
-from .serializers import AuthorSerializer, PostSerializer, CommentSerializer
+from .serializers import AuthorSerializer, PostSerializer, CommentSerializer, PostLikeSerializer, CommentLikeSerializer
 
 
 @api_view((['POST']))
@@ -216,3 +216,73 @@ def comments(request, author_id, post_id):
         comment.save()
 
         return Response(data=comment.data)
+
+
+@api_view(['POST'])
+def inbox(request, id):
+    data = request.data
+    type = data["type"]
+
+    if type == "Like":
+        data['author_id'] = id
+        url_components = data['object'].split('/')
+        object_id = url_components[-1]
+
+        if url_components[-2] == "posts":
+            try:
+                Post.objects.get(id=object_id)
+            except Post.DoesNotExist:
+                return Response(data="Post does not exist", status=status.HTTP_400_BAD_REQUEST)
+
+            data['post_id'] = object_id
+            serialized_like = PostLikeSerializer(data=data)
+
+            if not serialized_like.is_valid():
+                return Response(data="something went wrong", status=status.HTTP_400_BAD_REQUEST)
+
+            serialized_like.save()
+
+            return Response(data=serialized_like.data)
+
+        elif url_components[-2] == "comments":
+            try:
+                comment = Comment.objects.get(id=object_id)
+            except Post.DoesNotExist:
+                return Response(data="Post does not exist", status=status.HTTP_400_BAD_REQUEST)
+            except Comment.DoesNotExist:
+                return Response(data="Comment does not exist", status=status.HTTP_400_BAD_REQUEST)
+
+            data['comment_id'] = object_id
+            serialized_like = CommentLikeSerializer(data=data)
+
+            if not serialized_like.is_valid():
+                return Response(data="something went wrong", status=status.HTTP_400_BAD_REQUEST)
+
+            serialized_like.save()
+
+            comment_data = serialized_like.data
+            comment_data["object"] = f"{HOST}/api/authors/{id}/posts/{comment.post.id}/comments/{comment.id}"
+
+            return Response(data=comment_data)
+
+        else:
+            return Response("Wtf you tryna do", status=status.HTTP_400_BAD_REQUEST)
+
+    elif type == "post":
+        return Response("not implemented")
+    elif type == "comment":
+        return Response("not implemented")
+    elif type == "Follow":
+        return Response("not implemented")
+
+@api_view(['GET'])
+def post_likes(request, author_id, post_id):
+    post_likes = PostLike.objects.filter(post_id=post_id)
+    serialized_post_like = PostLikeSerializer(post_likes, many=True)
+    return Response(data=serialized_post_like.data)
+
+@api_view(['GET'])
+def comment_likes(request, author_id, post_id, comment_id):
+    comment_likes = CommentLike.objects.filter(comment_id=comment_id)
+    serialized_comment_like = CommentLikeSerializer(comment_likes, many=True)
+    return Response(data=serialized_comment_like.data)

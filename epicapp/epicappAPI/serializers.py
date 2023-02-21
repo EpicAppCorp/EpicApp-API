@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth.hashers import make_password
 
-from .models import Author, Post, Comment
+from .models import Author, Post, Comment, PostLike, CommentLike
 from .config import HOST
 
 
@@ -81,4 +81,41 @@ class CommentSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         representation = super().to_representation(instance)
         representation['id'] = f"{HOST}/api/authors/{instance.author.id}/posts/{instance.post.id}/comments/{instance.id}"
+        return representation
+
+class PostLikeSerializer(serializers.ModelSerializer):
+    author = AuthorSerializer(read_only=True)
+    author_id = serializers.CharField(write_only = True)
+    post_id = serializers.CharField(write_only = True)
+
+    class Meta:
+        model = PostLike
+        fields = ['type', 'author', 'author_id', 'post_id']
+
+    def create(self, validated_data):
+        return PostLike.objects.create(**validated_data)
+
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        representation["@context"] = "https://www.w3.org/ns/activitystreams"
+        representation["summary"] = f"{instance.author.displayName} Likes your post"
+        representation["object"] =  f"{HOST}/api/authors/{instance.author.id}/posts/{instance.post_id}"
+        return representation
+
+class CommentLikeSerializer(serializers.ModelSerializer):
+    author = AuthorSerializer(read_only=True)
+    author_id = serializers.CharField(write_only = True)
+    comment_id = serializers.CharField(write_only = True)
+
+    class Meta:
+        model = CommentLike
+        fields = ['id', 'type', 'author', 'author_id', 'comment_id']
+
+    def create(self, validated_data):
+        return CommentLike.objects.create(**validated_data)
+
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        representation["@context"] = "https://www.w3.org/ns/activitystreams"
+        representation["summary"] = f"{instance.author.displayName} Likes your comment"
         return representation
