@@ -15,5 +15,7 @@ urlpatterns = [
     path('authors/<str:id>/inbox', views.inbox, name='inbox'),
 
     path('authors/<str:author_id>/posts/<str:post_id>/likes', views.post_likes, name="post likes endpoint"),
-    path('authors/<str:author_id>/posts/<str:post_id>/comments/<str:comment_id>/likes', views.comment_likes, name="comments likes endpoint")
+    path('authors/<str:author_id>/posts/<str:post_id>/comments/<str:comment_id>/likes', views.comment_likes, name="comments likes endpoint"),
+
+    path('authors/<str:id>/liked', views.liked, name="liked items (comments and posts)")
 ]

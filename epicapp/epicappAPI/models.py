@@ -75,6 +75,7 @@ class CommentLike(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     author = models.ForeignKey(Author, on_delete=models.CASCADE)
     comment = models.ForeignKey(Comment, on_delete=models.CASCADE)
+    post = models.ForeignKey(Post, on_delete=models.CASCADE)
 
 class Inbox(models.Model):
     author = models.ForeignKey(Author, on_delete=models.CASCADE)

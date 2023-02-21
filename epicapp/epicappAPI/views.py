@@ -256,6 +256,7 @@ def inbox(request, id):
                 return Response(data="Comment does not exist", status=status.HTTP_400_BAD_REQUEST)
 
             data['comment_id'] = object_id
+            data['post_id'] = url_components[-3]
             serialized_like = CommentLikeSerializer(data=data)
 
             if not serialized_like.is_valid():
@@ -267,7 +268,6 @@ def inbox(request, id):
             inbox_item.save()
 
             comment_data = serialized_like.data
-            comment_data["object"] = f"{HOST}/api/authors/{id}/posts/{comment.post.id}/comments/{comment.id}"
 
             return Response(data=comment_data)
 
@@ -292,3 +292,18 @@ def comment_likes(request, author_id, post_id, comment_id):
     comment_likes = CommentLike.objects.filter(comment_id=comment_id)
     serialized_comment_like = CommentLikeSerializer(comment_likes, many=True)
     return Response(data=serialized_comment_like.data)
+
+@api_view(['GET'])
+def liked(request, id):
+    liked_comments = CommentLike.objects.filter(author_id=id)
+    liked_posts = PostLike.objects.filter(author_id=id)
+
+    serialized_liked_comments = CommentLikeSerializer(liked_comments, many=True)
+    serialized_liked_posts = PostLikeSerializer(liked_posts, many=True)
+
+    data = {
+        "type": "liked",
+        "items": serialized_liked_posts.data + serialized_liked_comments.data # TODO: find better way to combine
+    }
+
+    return Response(data)
