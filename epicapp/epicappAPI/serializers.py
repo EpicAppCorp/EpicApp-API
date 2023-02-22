@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth.hashers import make_password
 
-from .models import Author, Post, Comment, PostLike, CommentLike
+from .models import Author, Post, Comment, PostLike, CommentLike, Inbox
 from .config import HOST
 
 
@@ -90,7 +90,7 @@ class PostLikeSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = PostLike
-        fields = ['type', 'author', 'author_id', 'post_id']
+        fields = ['id', 'type', 'author', 'author_id', 'post_id']
 
     def create(self, validated_data):
         return PostLike.objects.create(**validated_data)

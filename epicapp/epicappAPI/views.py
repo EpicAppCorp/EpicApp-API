@@ -8,7 +8,7 @@ from rest_framework.exceptions import APIException, NotFound
 from rest_framework import serializers, status
 from django.http import JsonResponse
 
-from .models import Author, Post, Comment, PostLike, CommentLike
+from .models import Author, Post, Comment, PostLike, CommentLike, Inbox
 from .config import HOST
 from .serializers import AuthorSerializer, PostSerializer, CommentSerializer, PostLikeSerializer, CommentLikeSerializer
 
@@ -242,6 +242,9 @@ def inbox(request, id):
 
             serialized_like.save()
 
+            inbox_item = Inbox(content_object=serialized_like.instance, author_id=id)
+            inbox_item.save()
+
             return Response(data=serialized_like.data)
 
         elif url_components[-2] == "comments":
@@ -259,6 +262,9 @@ def inbox(request, id):
                 return Response(data="something went wrong", status=status.HTTP_400_BAD_REQUEST)
 
             serialized_like.save()
+
+            inbox_item = Inbox(content_object=serialized_like.instance, author_id=id)
+            inbox_item.save()
 
             comment_data = serialized_like.data
             comment_data["object"] = f"{HOST}/api/authors/{id}/posts/{comment.post.id}/comments/{comment.id}"
