@@ -284,7 +284,12 @@ def inbox(request, id):
     elif request.method == 'GET':
         inbox_items = Inbox.objects.filter(author_id=id)
         serialized_inbox_items = InboxSerializer(inbox_items, many=True)
-        return Response(serialized_inbox_items.data)
+        data = {
+            "type": "inbox",
+            "author": f"{HOST}/authors/{id}",
+            "items": serialized_inbox_items.data
+        }
+        return Response(data)
 
 @api_view(['GET'])
 def post_likes(request, author_id, post_id):
