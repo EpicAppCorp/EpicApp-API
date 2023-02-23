@@ -276,7 +276,20 @@ def inbox(request, id):
                 return Response("Wtf you tryna do", status=status.HTTP_400_BAD_REQUEST)
 
         elif type == "post":
-            return Response("not implemented")
+            post_data = data
+            post_data["author_id"] = id
+            post = PostSerializer(data=post_data)
+            
+            if not post.is_valid():
+                return Response(data=post.errors, status=status.HTTP_400_BAD_REQUEST)
+
+            post.save()
+
+            inbox_item = Inbox(content_object=post.instance, author_id=id)
+            inbox_item.save()
+
+            return Response(data=post.data)
+
         elif type == "comment":
             return Response("not implemented")
         elif type == "Follow":
