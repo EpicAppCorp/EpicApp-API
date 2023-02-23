@@ -281,6 +281,7 @@ def inbox(request, id):
             return Response("not implemented")
         elif type == "Follow":
             return Response("not implemented")
+
     elif request.method == 'GET':
         inbox_items = Inbox.objects.filter(author_id=id)
         serialized_inbox_items = InboxSerializer(inbox_items, many=True)
@@ -290,6 +291,7 @@ def inbox(request, id):
             "items": serialized_inbox_items.data
         }
         return Response(data)
+
     elif request.method == 'DELETE':
         Inbox.objects.filter(author_id=id).delete()
         return Response(f"Cleared inbox for author with id: {id}")
