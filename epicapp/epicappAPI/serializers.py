@@ -122,3 +122,24 @@ class CommentLikeSerializer(serializers.ModelSerializer):
         representation["object"] =  f"{HOST}/api/authors/{instance.author.id}/posts/{instance.post_id}/comments/{instance.id}"
         del representation['post_id'] # only need for the url in object
         return representation
+
+class InboxSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Inbox
+        fields = ['content_type', 'object_id', 'content_object']
+
+    def to_representation(self, instance):
+        value = instance.content_object
+        if isinstance(value, PostLike):
+            serializer = PostLikeSerializer(value)
+        elif isinstance(value, CommentLike):
+            serializer = CommentLikeSerializer(value)
+        elif isinstance(value, Post):
+            serializer = PostSerializer(value)
+        elif isinstance(value, Comment):
+            serializer = CommentSerializer(value)
+        # elif isinstance(value, Follow): TODO
+
+        else:
+            raise Exception('Unexpected type of tagged object')
+        return serializer.data

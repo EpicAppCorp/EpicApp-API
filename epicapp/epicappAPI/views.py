@@ -10,7 +10,7 @@ from django.http import JsonResponse
 
 from .models import Author, Post, Comment, PostLike, CommentLike, Inbox
 from .config import HOST
-from .serializers import AuthorSerializer, PostSerializer, CommentSerializer, PostLikeSerializer, CommentLikeSerializer
+from .serializers import AuthorSerializer, PostSerializer, CommentSerializer, PostLikeSerializer, CommentLikeSerializer, InboxSerializer
 
 
 @api_view((['POST']))
@@ -218,68 +218,73 @@ def comments(request, author_id, post_id):
         return Response(data=comment.data)
 
 
-@api_view(['POST'])
+@api_view(['POST', 'GET'])
 def inbox(request, id):
-    data = request.data
-    type = data["type"]
+    if request.method == 'POST':
+        data = request.data
+        type = data["type"]
 
-    if type == "Like":
-        data['author_id'] = id
-        url_components = data['object'].split('/')
-        object_id = url_components[-1]
+        if type == "Like":
+            data['author_id'] = id
+            url_components = data['object'].split('/')
+            object_id = url_components[-1]
 
-        if url_components[-2] == "posts":
-            try:
-                Post.objects.get(id=object_id)
-            except Post.DoesNotExist:
-                return Response(data="Post does not exist", status=status.HTTP_400_BAD_REQUEST)
+            if url_components[-2] == "posts":
+                try:
+                    Post.objects.get(id=object_id)
+                except Post.DoesNotExist:
+                    return Response(data="Post does not exist", status=status.HTTP_400_BAD_REQUEST)
 
-            data['post_id'] = object_id
-            serialized_like = PostLikeSerializer(data=data)
+                data['post_id'] = object_id
+                serialized_like = PostLikeSerializer(data=data)
 
-            if not serialized_like.is_valid():
-                return Response(data="something went wrong", status=status.HTTP_400_BAD_REQUEST)
+                if not serialized_like.is_valid():
+                    return Response(data="something went wrong", status=status.HTTP_400_BAD_REQUEST)
 
-            serialized_like.save()
+                serialized_like.save()
 
-            inbox_item = Inbox(content_object=serialized_like.instance, author_id=id)
-            inbox_item.save()
+                inbox_item = Inbox(content_object=serialized_like.instance, author_id=id)
+                inbox_item.save()
 
-            return Response(data=serialized_like.data)
+                return Response(data=serialized_like.data)
 
-        elif url_components[-2] == "comments":
-            try:
-                comment = Comment.objects.get(id=object_id)
-            except Post.DoesNotExist:
-                return Response(data="Post does not exist", status=status.HTTP_400_BAD_REQUEST)
-            except Comment.DoesNotExist:
-                return Response(data="Comment does not exist", status=status.HTTP_400_BAD_REQUEST)
+            elif url_components[-2] == "comments":
+                try:
+                    comment = Comment.objects.get(id=object_id)
+                except Post.DoesNotExist:
+                    return Response(data="Post does not exist", status=status.HTTP_400_BAD_REQUEST)
+                except Comment.DoesNotExist:
+                    return Response(data="Comment does not exist", status=status.HTTP_400_BAD_REQUEST)
 
-            data['comment_id'] = object_id
-            data['post_id'] = url_components[-3]
-            serialized_like = CommentLikeSerializer(data=data)
+                data['comment_id'] = object_id
+                data['post_id'] = url_components[-3]
+                serialized_like = CommentLikeSerializer(data=data)
 
-            if not serialized_like.is_valid():
-                return Response(data="something went wrong", status=status.HTTP_400_BAD_REQUEST)
+                if not serialized_like.is_valid():
+                    return Response(data="something went wrong", status=status.HTTP_400_BAD_REQUEST)
 
-            serialized_like.save()
+                serialized_like.save()
 
-            inbox_item = Inbox(content_object=serialized_like.instance, author_id=id)
-            inbox_item.save()
+                inbox_item = Inbox(content_object=serialized_like.instance, author_id=id)
+                inbox_item.save()
 
-            comment_data = serialized_like.data
+                comment_data = serialized_like.data
 
-            return Response(data=comment_data)
+                return Response(data=comment_data)
 
-        else:
-            return Response("Wtf you tryna do", status=status.HTTP_400_BAD_REQUEST)
+            else:
+                return Response("Wtf you tryna do", status=status.HTTP_400_BAD_REQUEST)
 
-    elif type == "post":
-        return Response("not implemented")
-    elif type == "comment":
-        return Response("not implemented")
-    elif type == "Follow":
-        return Response("not implemented")
+        elif type == "post":
+            return Response("not implemented")
+        elif type == "comment":
+            return Response("not implemented")
+        elif type == "Follow":
+            return Response("not implemented")
+    elif request.method == 'GET':
+        inbox_items = Inbox.objects.filter(author_id=id)
+        serialized_inbox_items = InboxSerializer(inbox_items, many=True)
+        return Response(serialized_inbox_items.data)
 
 @api_view(['GET'])
 def post_likes(request, author_id, post_id):
