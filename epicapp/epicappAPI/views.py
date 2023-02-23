@@ -218,7 +218,7 @@ def comments(request, author_id, post_id):
         return Response(data=comment.data)
 
 
-@api_view(['POST', 'GET'])
+@api_view(['POST', 'GET', 'DELETE'])
 def inbox(request, id):
     if request.method == 'POST':
         data = request.data
@@ -290,6 +290,9 @@ def inbox(request, id):
             "items": serialized_inbox_items.data
         }
         return Response(data)
+    elif request.method == 'DELETE':
+        Inbox.objects.filter(author_id=id).delete()
+        return Response(f"Cleared inbox for author with id: {id}")
 
 @api_view(['GET'])
 def post_likes(request, author_id, post_id):
