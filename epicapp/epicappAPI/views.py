@@ -342,7 +342,7 @@ def followers(request, author_id):
 
     if request.method == 'GET':
         try:
-            followers = Follow.objects.get(author_id=author_id)
+            followers = Follow.objects.filter(author_id=author_id)
             serialized_comments = CommentSerializer(comments, many=True)
 
             data = {
@@ -358,20 +358,21 @@ def followers(request, author_id):
 
 @api_view(['GET', 'DELETE', 'PUT'])
 def author_followers(request, author_id, foreign_author_id):
-    # TODO: authorization check
-    # TODO: permission check
+    # TODO: authorization check for PUT
+    # TODO: permission check for PUT
 
     if request.method == 'GET':
         try:
-            followers = Follow.objects.get(author_id=author_id)
-            serialized_comments = CommentSerializer(comments, many=True)
+            is_following = Follow.objects.contains(
+                actor=author_id, object=foreign_author_id)
 
-            data = {
-                "type": "followers",
-                "items": serialized_comments.data
-            }
-
-            return Response(data=data)
+        # TODO: IDK IF ACTUAL RESPONSE
+            return Response(data=is_following)
 
         except Author.DoesNotExist:
             return Response(data=f"Author with id: {author_id} does not exist", status=status.HTTP_404_NOT_FOUND)
+
+    if request.method == 'DELETE':
+        Follow.objects.filter(
+            actor=author_id, object=foreign_author_id).delete()
+        return Response(f"Cleared following of author: {foreign_author_id} for author: {author_id}")
