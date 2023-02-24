@@ -160,22 +160,16 @@ class InboxSerializer(serializers.ModelSerializer):
 
 
 class FollowSerializer(serializers.ModelSerializer):
+    type = serializers.ReadOnlyField()
+    actor = AuthorSerializer(read_only=True)
+    summary = serializers.CharField(write_only=True)
+    object = AuthorSerializer(read_only=True)
+
     class Meta:
         model = Follow
-        fields = ['type', 'items']
+        fields = ['type', 'summary', 'actor', 'object']
 
     def to_representation(self, instance):
-        value = instance.content_object
-        if isinstance(value, PostLike):
-            serializer = PostLikeSerializer(value)
-        elif isinstance(value, CommentLike):
-            serializer = CommentLikeSerializer(value)
-        elif isinstance(value, Post):
-            serializer = PostSerializer(value)
-        elif isinstance(value, Comment):
-            serializer = CommentSerializer(value)
-        # elif isinstance(value, Follow): TODO
-
-        else:
-            raise Exception('Unexpected type of tagged object')
-        return serializer.data
+        representation = super().to_representation(instance)
+        representation["summary"] = f"{instance.actor.displayName} Likes your comment"
+        return representation

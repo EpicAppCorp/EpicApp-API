@@ -354,3 +354,24 @@ def followers(request, author_id):
 
         except Author.DoesNotExist:
             return Response(data=f"Author with id: {author_id} does not exist", status=status.HTTP_404_NOT_FOUND)
+
+
+@api_view(['GET', 'DELETE', 'PUT'])
+def author_followers(request, author_id, foreign_author_id):
+    # TODO: authorization check
+    # TODO: permission check
+
+    if request.method == 'GET':
+        try:
+            followers = Follow.objects.get(author_id=author_id)
+            serialized_comments = CommentSerializer(comments, many=True)
+
+            data = {
+                "type": "followers",
+                "items": serialized_comments.data
+            }
+
+            return Response(data=data)
+
+        except Author.DoesNotExist:
+            return Response(data=f"Author with id: {author_id} does not exist", status=status.HTTP_404_NOT_FOUND)
