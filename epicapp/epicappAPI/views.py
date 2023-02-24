@@ -4,11 +4,9 @@ import datetime
 
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
-from rest_framework.exceptions import APIException, NotFound
-from rest_framework import serializers, status
-from django.http import JsonResponse
+from rest_framework import status
 
-from .models import Author, Post, Comment, PostLike, CommentLike, Inbox
+from .models import Author, Post, Comment, PostLike, CommentLike, Inbox, Follow
 from .config import HOST
 from .serializers import AuthorSerializer, PostSerializer, CommentSerializer, PostLikeSerializer, CommentLikeSerializer, InboxSerializer
 
@@ -93,6 +91,7 @@ def get_author(request, id):
 def get_authors(request):
     return Response(data="get many authors")
 
+
 @api_view(['POST', 'GET'])
 def posts(request, author_id):
     # TODO: authorization check
@@ -102,7 +101,7 @@ def posts(request, author_id):
         post_data = request.data
         post_data["author_id"] = author_id
         post = PostSerializer(data=post_data)
-        
+
         if not post.is_valid():
             return Response(data=post.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -117,11 +116,13 @@ def posts(request, author_id):
 
             author = Author.objects.get(id=author_id)
             offset = (page - 1) * size
-            posts = Post.objects.filter(author_id=author_id)[offset:offset+size]
+            posts = Post.objects.filter(author_id=author_id)[
+                offset:offset+size]
             serialized_posts = PostSerializer(posts, many=True)
             return Response(data=serialized_posts.data)
         except Author.DoesNotExist:
             return Response(data=f"Author with id: {author_id} does not exist", status=status.HTTP_404_NOT_FOUND)
+
 
 @api_view(['POST', 'GET', 'DELETE', 'PUT'])
 def post(request, author_id, post_id):
@@ -133,13 +134,13 @@ def post(request, author_id, post_id):
         post_data["id"] = post_id
         post_data["author_id"] = author_id
         post = PostSerializer(data=post_data)
-        
+
         if not post.is_valid():
             return Response(data=post.errors, status=status.HTTP_400_BAD_REQUEST)
 
         post.save()
 
-        return Response(data=post.data) 
+        return Response(data=post.data)
 
     elif request.method == 'GET':
         try:
@@ -154,7 +155,8 @@ def post(request, author_id, post_id):
             post = Post.objects.get(id=post_id)
             post_data = request.data
             post_data["id"] = post_id
-            updated_post = PostSerializer(instance=post, data=post_data, partial=True)
+            updated_post = PostSerializer(
+                instance=post, data=post_data, partial=True)
 
             if not updated_post.is_valid():
                 return Response(data=updated_post.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -171,11 +173,12 @@ def post(request, author_id, post_id):
             return Response(data=f"could not delete post with id \'{post_id}\'", status=status.HTTP_404_NOT_FOUND)
         return Response(data=affected_rows[0])
 
+
 @api_view(['POST', 'GET'])
 def comments(request, author_id, post_id):
     # TODO: authorization check
     # TODO: permission check
-    
+
     if request.method == 'GET':
         try:
             page = int(request.GET.get('page', 1))
@@ -185,7 +188,8 @@ def comments(request, author_id, post_id):
             post = Post.objects.get(id=post_id)
 
             offset = (page - 1) * size
-            comments = Comment.objects.filter(post_id=post_id)[offset:offset+size]
+            comments = Comment.objects.filter(post_id=post_id)[
+                offset:offset+size]
             serialized_comments = CommentSerializer(comments, many=True)
 
             data = {
@@ -203,7 +207,7 @@ def comments(request, author_id, post_id):
             return Response(data=f"Author with id: {author_id} does not exist", status=status.HTTP_404_NOT_FOUND)
         except Post.DoesNotExist:
             return Response(data=f"Post with id: {post_id} does not exist", status=status.HTTP_404_NOT_FOUND)
-        
+
     if request.method == 'POST':
         comment_data = request.data
         comment_data["post_id"] = post_id
@@ -243,7 +247,8 @@ def inbox(request, id):
 
                 serialized_like.save()
 
-                inbox_item = Inbox(content_object=serialized_like.instance, author_id=id)
+                inbox_item = Inbox(
+                    content_object=serialized_like.instance, author_id=id)
                 inbox_item.save()
 
                 return Response(data=serialized_like.data)
@@ -265,7 +270,8 @@ def inbox(request, id):
 
                 serialized_like.save()
 
-                inbox_item = Inbox(content_object=serialized_like.instance, author_id=id)
+                inbox_item = Inbox(
+                    content_object=serialized_like.instance, author_id=id)
                 inbox_item.save()
 
                 comment_data = serialized_like.data
@@ -296,11 +302,13 @@ def inbox(request, id):
         Inbox.objects.filter(author_id=id).delete()
         return Response(f"Cleared inbox for author with id: {id}")
 
+
 @api_view(['GET'])
 def post_likes(request, author_id, post_id):
     post_likes = PostLike.objects.filter(post_id=post_id)
     serialized_post_like = PostLikeSerializer(post_likes, many=True)
     return Response(data=serialized_post_like.data)
+
 
 @api_view(['GET'])
 def comment_likes(request, author_id, post_id, comment_id):
@@ -308,17 +316,41 @@ def comment_likes(request, author_id, post_id, comment_id):
     serialized_comment_like = CommentLikeSerializer(comment_likes, many=True)
     return Response(data=serialized_comment_like.data)
 
+
 @api_view(['GET'])
 def liked(request, id):
     liked_comments = CommentLike.objects.filter(author_id=id)
     liked_posts = PostLike.objects.filter(author_id=id)
 
-    serialized_liked_comments = CommentLikeSerializer(liked_comments, many=True)
+    serialized_liked_comments = CommentLikeSerializer(
+        liked_comments, many=True)
     serialized_liked_posts = PostLikeSerializer(liked_posts, many=True)
 
     data = {
         "type": "liked",
-        "items": serialized_liked_posts.data + serialized_liked_comments.data # TODO: find better way to combine
+        # TODO: find better way to combine
+        "items": serialized_liked_posts.data + serialized_liked_comments.data
     }
 
     return Response(data)
+
+
+@api_view(['GET'])
+def followers(request, author_id):
+    # TODO: authorization check
+    # TODO: permission check
+
+    if request.method == 'GET':
+        try:
+            followers = Follow.objects.get(author_id=author_id)
+            serialized_comments = CommentSerializer(comments, many=True)
+
+            data = {
+                "type": "followers",
+                "items": serialized_comments.data
+            }
+
+            return Response(data=data)
+
+        except Author.DoesNotExist:
+            return Response(data=f"Author with id: {author_id} does not exist", status=status.HTTP_404_NOT_FOUND)
