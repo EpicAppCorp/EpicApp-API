@@ -340,10 +340,10 @@ def followers(request, author_id):
     if request.method == 'GET':
         try:
             followers = Follower.objects.filter(author__id=author_id)
-            serialized_comments = FollowerSerializer(followers, many=True)
+            serialized_followers = FollowerSerializer(followers, many=True)
             return Response(data={
                 "type": "followers",
-                "items": serialized_comments.data
+                "items": serialized_followers.data
             })
 
         except Author.DoesNotExist:
@@ -358,25 +358,25 @@ def author_followers(request, author_id, foreign_author_id):
     if request.method == 'GET':
         try:
             is_following = Follower.objects.contains(
-                actor=author_id, object=foreign_author_id)
+                author__id=author_id, follower__id=foreign_author_id)
 
         # TODO: IDK IF ACTUAL RESPONSE
             return Response(data=is_following)
 
-        except Author.DoesNotExist:
+        except:
             return Response(data=f"Author with id: {author_id} does not exist", status=status.HTTP_404_NOT_FOUND)
 
     if request.method == 'DELETE':
         Follower.objects.filter(
-            actor=author_id, object=foreign_author_id).delete()
-        return Response(f"Cleared following of author: {foreign_author_id} for author: {author_id}")
+            author__id=author_id, follower__id=foreign_author_id).delete()
+        return Response(f"Cleared following of author: {foreign_author_id} for author: {author_id}", status=status.HTTP_200_OK)
 
     # TODO This method needs to be authenticated
     if request.method == 'PUT':
-        follow_request = FollowRequestSerializer(data=request.data)
+        follow_request = FollowerSerializer(data=request.data)
 
         if not follow_request.is_valid():
             return Response(data=follow_request.errors, status=status.HTTP_400_BAD_REQUEST)
 
         follow_request.save()
-        return Response(follow_request.data)
+        return Response(follow_request.data, status=status.HTTP_200_OK)

@@ -161,8 +161,8 @@ class InboxSerializer(serializers.ModelSerializer):
 
 
 class FollowerSerializer(serializers.ModelSerializer):
+    id = serializers.CharField(write_only=True)
     author = AuthorSerializer(read_only=True)
-    author_id = serializers.CharField(write_only=True)
     follower = AuthorSerializer(read_only=True)
 
     class Meta:
