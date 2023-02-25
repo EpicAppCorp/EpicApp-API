@@ -6,9 +6,9 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
 
-from .models import Author, Post, Comment, PostLike, CommentLike, Inbox, Follow
+from .models import Author, Post, Comment, PostLike, CommentLike, Inbox, Follower, FollowRequest
 from .config import HOST
-from .serializers import AuthorSerializer, PostSerializer, CommentSerializer, PostLikeSerializer, CommentLikeSerializer, InboxSerializer
+from .serializers import AuthorSerializer, PostSerializer, CommentSerializer, PostLikeSerializer, CommentLikeSerializer, InboxSerializer, FollowerSerializer, FollowRequestSerializer
 
 
 @api_view((['POST']))
@@ -337,20 +337,14 @@ def liked(request, id):
 
 @api_view(['GET'])
 def followers(request, author_id):
-    # TODO: authorization check
-    # TODO: permission check
-
     if request.method == 'GET':
         try:
-            followers = Follow.objects.filter(author_id=author_id)
-            serialized_comments = CommentSerializer(comments, many=True)
-
-            data = {
+            followers = Follower.objects.filter(author__id=author_id)
+            serialized_comments = FollowerSerializer(followers, many=True)
+            return Response(data={
                 "type": "followers",
                 "items": serialized_comments.data
-            }
-
-            return Response(data=data)
+            })
 
         except Author.DoesNotExist:
             return Response(data=f"Author with id: {author_id} does not exist", status=status.HTTP_404_NOT_FOUND)
@@ -363,7 +357,7 @@ def author_followers(request, author_id, foreign_author_id):
 
     if request.method == 'GET':
         try:
-            is_following = Follow.objects.contains(
+            is_following = Follower.objects.contains(
                 actor=author_id, object=foreign_author_id)
 
         # TODO: IDK IF ACTUAL RESPONSE
@@ -373,6 +367,16 @@ def author_followers(request, author_id, foreign_author_id):
             return Response(data=f"Author with id: {author_id} does not exist", status=status.HTTP_404_NOT_FOUND)
 
     if request.method == 'DELETE':
-        Follow.objects.filter(
+        Follower.objects.filter(
             actor=author_id, object=foreign_author_id).delete()
         return Response(f"Cleared following of author: {foreign_author_id} for author: {author_id}")
+
+    # TODO This method needs to be authenticated
+    if request.method == 'PUT':
+        follow_request = FollowRequestSerializer(data=request.data)
+
+        if not follow_request.is_valid():
+            return Response(data=follow_request.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        follow_request.save()
+        return Response(follow_request.data)

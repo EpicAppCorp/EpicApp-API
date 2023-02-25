@@ -14,7 +14,7 @@ class Author(AbstractUser):
     displayName = models.CharField(unique=True, max_length=36)
     url = models.CharField(max_length=255)
     password = models.CharField(max_length=255)
-    github = models.CharField(unique=True, max_length=255)
+    github = models.URLField(unique=True)
     profile_image = models.TextField()
 
     # remove unused fields inherited from AbstractUser
@@ -96,9 +96,17 @@ class Inbox(models.Model):
         ordering = ('created_at', )
 
 
-class Follow(models.Model):
+class Follower(models.Model):
+    id = models.CharField(primary_key=True, max_length=255,
+                          default=uuid.uuid4, editable=False)
+    author = models.ForeignKey(Author, on_delete=models.CASCADE)
+    follower = models.ForeignKey(Author, on_delete=models.CASCADE)
+
+    class Meta:
+        unique_together = (('author', 'follower'))
+
+
+class FollowRequest(models.Model):
     type = "follow"
-    summary = models.CharField(
-        primary_key=True, default=uuid.uuid4, max_length=255, unique=True)
     actor = models.ForeignKey(Author, on_delete=models.CASCADE)
     object = models.ForeignKey(Author, on_delete=models.CASCADE)
