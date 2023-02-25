@@ -99,14 +99,16 @@ class Inbox(models.Model):
 class Follower(models.Model):
     id = models.CharField(primary_key=True, max_length=255,
                           default=uuid.uuid4, editable=False)
-    author = models.ForeignKey(Author, on_delete=models.CASCADE)
-    follower = models.ForeignKey(Author, on_delete=models.CASCADE)
+    author = models.ForeignKey(
+        Author, on_delete=models.CASCADE, related_name='author')
+    follower = models.ForeignKey(
+        Author, on_delete=models.CASCADE, related_name='follower')
 
     class Meta:
         unique_together = (('author', 'follower'))
 
 
-class FollowRequest(models.Model):
-    type = "follow"
-    actor = models.ForeignKey(Author, on_delete=models.CASCADE)
-    object = models.ForeignKey(Author, on_delete=models.CASCADE)
+# class FollowRequest(models.Model):
+#     type = "follow"
+#     actor = models.ForeignKey(Author, on_delete=models.CASCADE)
+#     object = models.ForeignKey(Author, on_delete=models.CASCADE)

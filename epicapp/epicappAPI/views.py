@@ -6,9 +6,9 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
 
-from .models import Author, Post, Comment, PostLike, CommentLike, Inbox, Follower, FollowRequest
+from .models import Author, Post, Comment, PostLike, CommentLike, Inbox, Follower
 from .config import HOST
-from .serializers import AuthorSerializer, PostSerializer, CommentSerializer, PostLikeSerializer, CommentLikeSerializer, InboxSerializer, FollowerSerializer, FollowRequestSerializer
+from .serializers import AuthorSerializer, PostSerializer, CommentSerializer, PostLikeSerializer, CommentLikeSerializer, InboxSerializer, FollowerSerializer
 
 
 @api_view((['POST']))
@@ -373,8 +373,10 @@ def author_followers(request, author_id, foreign_author_id):
 
     # TODO This method needs to be authenticated
     if request.method == 'PUT':
-        follow_request = FollowerSerializer(data=request.data)
+        follow_request = FollowerSerializer(
+            data={"author": author_id, "follower": foreign_author_id})
 
+        print(follow_request)
         if not follow_request.is_valid():
             return Response(data=follow_request.errors, status=status.HTTP_400_BAD_REQUEST)
 

@@ -32,6 +32,6 @@ urlpatterns = [
     path('authors/<str:author_id>/followers/',
          views.followers, name="get followers endpoint"),
     path('authors/<str:author_id>/followers/<str:foreign_author_id>',
-         views.comment_likes, name="comments likes endpoint"),
+         views.author_followers, name="comments likes endpoint"),
 
 ]
