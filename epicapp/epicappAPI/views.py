@@ -4,13 +4,19 @@ import datetime
 
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
-from rest_framework import status
+from rest_framework.exceptions import APIException, NotFound
+from rest_framework import serializers, status
+from django.http import JsonResponse
+from rest_framework.views import APIView
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
 
 from .models import Author, Post, Comment, PostLike, CommentLike, Inbox, Follower
 from .config import HOST
 from .serializers import AuthorSerializer, PostSerializer, CommentSerializer, PostLikeSerializer, CommentLikeSerializer, InboxSerializer, FollowerSerializer
 
 
+@swagger_auto_schema(method='post', operation_description="Signup")
 @api_view((['POST']))
 def register(request):
     if request.method == 'POST':
@@ -24,6 +30,7 @@ def register(request):
         return Response(author.data)
 
 
+@swagger_auto_schema(method='post', operation_description="Login")
 @api_view((['POST']))
 def authenticate(request):
     if request.method == 'POST':
@@ -54,6 +61,7 @@ def authenticate(request):
         return response
 
 
+@swagger_auto_schema(method='post', operation_description="logout")
 @api_view((['POST']))
 def logout(request):
     if request.method == 'POST':
@@ -63,6 +71,7 @@ def logout(request):
         return response
 
 
+@swagger_auto_schema(method='get', operation_description="Get details of author")
 @api_view(['GET'])
 def get_author_details(request):
     if request.method == 'GET':
@@ -92,6 +101,8 @@ def get_authors(request):
     return Response(data="get many authors")
 
 
+@swagger_auto_schema(method='get', operation_description="Get a list of posts (paginated)")
+@swagger_auto_schema(method='post', operation_description="Create a post")
 @api_view(['POST', 'GET'])
 def posts(request, author_id):
     # TODO: authorization check
@@ -124,6 +135,10 @@ def posts(request, author_id):
             return Response(data=f"Author with id: {author_id} does not exist", status=status.HTTP_404_NOT_FOUND)
 
 
+@swagger_auto_schema(method='put', operation_description="Create a post with a given id")
+@swagger_auto_schema(method='get', operation_description="Get a post by id")
+@swagger_auto_schema(method='delete', operation_description="Delete a post")
+@swagger_auto_schema(method='post', operation_description="Update a post")
 @api_view(['POST', 'GET', 'DELETE', 'PUT'])
 def post(request, author_id, post_id):
     # TODO: authorization check
@@ -174,6 +189,8 @@ def post(request, author_id, post_id):
         return Response(data=affected_rows[0])
 
 
+@swagger_auto_schema(method='post', operation_description="Comment on a post")
+@swagger_auto_schema(method='get', operation_description="Get a comment")
 @api_view(['POST', 'GET'])
 def comments(request, author_id, post_id):
     # TODO: authorization check
@@ -222,6 +239,9 @@ def comments(request, author_id, post_id):
         return Response(data=comment.data)
 
 
+@swagger_auto_schema(method='post', operation_description="Send an object to inbox")
+@swagger_auto_schema(method='get', operation_description="Get a list of objects from inbox")
+@swagger_auto_schema(method='delete', operation_description="Clear inbox")
 @api_view(['POST', 'GET', 'DELETE'])
 def inbox(request, id):
     if request.method == 'POST':
@@ -316,6 +336,7 @@ def inbox(request, id):
         return Response(f"Cleared inbox for author with id: {id}")
 
 
+@swagger_auto_schema(method='get', operation_description="Like a post")
 @api_view(['GET'])
 def post_likes(request, author_id, post_id):
     post_likes = PostLike.objects.filter(post_id=post_id)
@@ -323,6 +344,7 @@ def post_likes(request, author_id, post_id):
     return Response(data=serialized_post_like.data)
 
 
+@swagger_auto_schema(method='get', operation_description="get likes from a comment")
 @api_view(['GET'])
 def comment_likes(request, author_id, post_id, comment_id):
     comment_likes = CommentLike.objects.filter(comment_id=comment_id)
@@ -330,6 +352,7 @@ def comment_likes(request, author_id, post_id, comment_id):
     return Response(data=serialized_comment_like.data)
 
 
+@swagger_auto_schema(method='get', operation_description="get objects an author has liked")
 @api_view(['GET'])
 def liked(request, id):
     liked_comments = CommentLike.objects.filter(author_id=id)
