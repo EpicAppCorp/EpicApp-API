@@ -339,7 +339,7 @@ def liked(request, id):
 def followers(request, author_id):
     if request.method == 'GET':
         try:
-            followers = Follower.objects.filter(author__id=author_id)
+            followers = Follower.objects.filter(author=author_id)
             serialized_followers = FollowerSerializer(followers, many=True)
             return Response(data={
                 "type": "followers",
@@ -373,10 +373,11 @@ def author_followers(request, author_id, foreign_author_id):
 
     # TODO This method needs to be authenticated
     if request.method == 'PUT':
+        print("lol", {"author": author_id, "follower": foreign_author_id})
+
         follow_request = FollowerSerializer(
             data={"author": author_id, "follower": foreign_author_id})
 
-        print(follow_request)
         if not follow_request.is_valid():
             return Response(data=follow_request.errors, status=status.HTTP_400_BAD_REQUEST)
 

@@ -99,10 +99,10 @@ class Inbox(models.Model):
 class Follower(models.Model):
     id = models.CharField(primary_key=True, max_length=255,
                           default=uuid.uuid4, editable=False)
-    author = models.ForeignKey(
-        Author, on_delete=models.CASCADE, related_name='author')
-    follower = models.ForeignKey(
-        Author, on_delete=models.CASCADE, related_name='follower')
+    author = models.CharField(max_length=255,
+                              default=uuid.uuid4, editable=False)
+    follower = models.CharField(max_length=255,
+                                default=uuid.uuid4, editable=False)
 
     class Meta:
         unique_together = (('author', 'follower'))

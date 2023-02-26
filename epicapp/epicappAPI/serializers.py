@@ -169,13 +169,13 @@ class FollowerSerializer(serializers.ModelSerializer):
         fields = ['id', 'author', 'follower']
 
     def create(self, validated_data):
-        # hash password
         return Follower.objects.create(**validated_data)
 
-    def to_representation(self, instance):
-        representation = super().to_representation(instance)
-        del representation['author']  # dont need the author in the response
-        return representation
+    # def to_representation(self, instance):
+    #     representation = super().to_representation(instance)
+    #     print(representation)
+    #     del representation['author']  # dont need the author in the response
+    #     return representation
 
 
 # class FollowRequestSerializer(serializers.ModelSerializer):
