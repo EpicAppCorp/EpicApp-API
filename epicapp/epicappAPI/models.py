@@ -108,7 +108,9 @@ class Follower(models.Model):
         unique_together = (('author', 'follower'))
 
 
-# class FollowRequest(models.Model):
-#     type = "follow"
-#     actor = models.ForeignKey(Author, on_delete=models.CASCADE)
-#     object = models.ForeignKey(Author, on_delete=models.CASCADE)
+class FollowRequest(models.Model):
+    type = "Follow"
+    actor = models.ForeignKey(
+        Author, on_delete=models.CASCADE,  related_name='follower')
+    object = models.ForeignKey(
+        Author, on_delete=models.CASCADE,  related_name='followee')

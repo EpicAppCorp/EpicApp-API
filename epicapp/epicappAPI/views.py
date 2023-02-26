@@ -365,6 +365,8 @@ def followers(request, author_id):
 
         except Author.DoesNotExist:
             return Response(data=f"Author with id: {author_id} does not exist", status=status.HTTP_404_NOT_FOUND)
+        except:
+            return Response(status=status.HTTP_404_NOT_FOUND)
 
 
 @api_view(['GET', 'DELETE', 'PUT'])
@@ -372,14 +374,18 @@ def author_followers(request, author_id, foreign_author_id):
 
     if request.method == 'GET':
         try:
-            is_following = Follower.objects.contains(
-                author=author_id, follower=foreign_author_id)
+            following = Follower.objects.filter(
+                author=author_id, follower=foreign_author_id).first()
 
-        # TODO: IDK IF ACTUAL RESPONSE
-            return Response(data=is_following)
+        # TODO: IDK IF ACTUAL RESPONSE - JUST SENDING 404
+            if (following is None):
+                return Response(data=f"Author with id: {foreign_author_id} is not following author: {author_id}", status=status.HTTP_404_NOT_FOUND)
+
+        # TODO: IDK IF ACTUAL RESPONSE - JUST SENDING 200
+            return Response(status=status.HTTP_200_OK)
 
         except:
-            return Response(data=f"Author with id: {author_id} does not exist", status=status.HTTP_404_NOT_FOUND)
+            return Response(data="Error", status=status.HTTP_404_NOT_FOUND)
 
     if request.method == 'DELETE':
         Follower.objects.filter(

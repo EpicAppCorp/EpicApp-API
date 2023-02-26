@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth.hashers import make_password
 
-from .models import Author, Post, Comment, PostLike, CommentLike, Inbox, Follower
+from .models import Author, Post, Comment, PostLike, CommentLike, Inbox, Follower, FollowRequest
 from .config import HOST
 
 
@@ -152,8 +152,8 @@ class InboxSerializer(serializers.ModelSerializer):
             serializer = PostSerializer(value)
         elif isinstance(value, Comment):
             serializer = CommentSerializer(value)
-        # elif isinstance(value, FollowRequest):
-        #     serializer = FollowRequestSerializer(value)
+        elif isinstance(value, FollowRequest):
+            serializer = FollowRequestSerializer(value)
 
         else:
             raise Exception('Unexpected type of tagged object')
@@ -172,16 +172,16 @@ class FollowerSerializer(serializers.ModelSerializer):
         return Follower.objects.create(**validated_data)
 
 
-# class FollowRequestSerializer(serializers.ModelSerializer):
-#     type = serializers.ReadOnlyField()
-#     actor = AuthorSerializer(read_only=True)
-#     object = AuthorSerializer(read_only=True)
+class FollowRequestSerializer(serializers.ModelSerializer):
+    type = serializers.ReadOnlyField()
+    actor = AuthorSerializer(read_only=True)
+    object = AuthorSerializer(read_only=True)
 
-#     class Meta:
-#         model = FollowRequest
-#         fields = ['type', 'actor', 'object']
+    class Meta:
+        model = FollowRequest
+        fields = ['type', 'actor', 'object']
 
-#     def to_representation(self, instance):
-#         representation = super().to_representation(instance)
-#         representation["summary"] = f"{instance.actor.displayName} wants to follow {instance.object.displayName}"
-#         return representation
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        representation["summary"] = f"{instance.actor.displayName} wants to follow {instance.object.displayName}"
+        return representation
