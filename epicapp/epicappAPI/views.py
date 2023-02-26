@@ -285,7 +285,7 @@ def inbox(request, id):
             post_data = data
             post_data["author_id"] = id
             post = PostSerializer(data=post_data)
-            
+
             if not post.is_valid():
                 return Response(data=post.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -354,9 +354,13 @@ def followers(request, author_id):
         try:
             followers = Follower.objects.filter(author=author_id)
             serialized_followers = FollowerSerializer(followers, many=True)
+            authors = Author.objects.filter(
+                id__in=[x.get('follower') for x in serialized_followers.data])
+            serialized_authors = AuthorSerializer(authors, many=True)
+
             return Response(data={
                 "type": "followers",
-                "items": serialized_followers.data
+                "items": serialized_authors.data
             })
 
         except Author.DoesNotExist:
@@ -365,13 +369,11 @@ def followers(request, author_id):
 
 @api_view(['GET', 'DELETE', 'PUT'])
 def author_followers(request, author_id, foreign_author_id):
-    # TODO: authorization check for PUT
-    # TODO: permission check for PUT
 
     if request.method == 'GET':
         try:
             is_following = Follower.objects.contains(
-                author__id=author_id, follower__id=foreign_author_id)
+                author=author_id, follower=foreign_author_id)
 
         # TODO: IDK IF ACTUAL RESPONSE
             return Response(data=is_following)
@@ -381,13 +383,11 @@ def author_followers(request, author_id, foreign_author_id):
 
     if request.method == 'DELETE':
         Follower.objects.filter(
-            author__id=author_id, follower__id=foreign_author_id).delete()
+            author=author_id, follower=foreign_author_id).delete()
         return Response(f"Cleared following of author: {foreign_author_id} for author: {author_id}", status=status.HTTP_200_OK)
 
     # TODO This method needs to be authenticated
     if request.method == 'PUT':
-        print("lol", {"author": author_id, "follower": foreign_author_id})
-
         follow_request = FollowerSerializer(
             data={"author": author_id, "follower": foreign_author_id})
 

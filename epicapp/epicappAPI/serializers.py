@@ -161,8 +161,8 @@ class InboxSerializer(serializers.ModelSerializer):
 
 
 class FollowerSerializer(serializers.ModelSerializer):
-    author = serializers.CharField(write_only=True)
-    follower = serializers.CharField(write_only=True)
+    author = serializers.CharField()
+    follower = serializers.CharField()
 
     class Meta:
         model = Follower
@@ -170,12 +170,6 @@ class FollowerSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         return Follower.objects.create(**validated_data)
-
-    # def to_representation(self, instance):
-    #     representation = super().to_representation(instance)
-    #     print(representation)
-    #     del representation['author']  # dont need the author in the response
-    #     return representation
 
 
 # class FollowRequestSerializer(serializers.ModelSerializer):
