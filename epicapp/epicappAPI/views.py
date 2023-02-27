@@ -1,5 +1,4 @@
 import jwt
-import uuid
 import datetime
 
 from rest_framework.decorators import api_view
@@ -14,6 +13,7 @@ from .serializers import AuthorSerializer, PostSerializer, CommentSerializer, Po
 @api_view((['POST']))
 def register(request):
     if request.method == 'POST':
+
         author = AuthorSerializer(data=request.data)
 
         if not author.is_valid():
@@ -21,10 +21,10 @@ def register(request):
 
         author.save()
 
-        return Response(author.data)
+        return Response(author.data, status=status.HTTP_201_CREATED)
 
 
-@api_view((['POST']))
+@ api_view((['POST']))
 def authenticate(request):
     if request.method == 'POST':
         # get first author with username
@@ -54,7 +54,7 @@ def authenticate(request):
         return response
 
 
-@api_view((['POST']))
+@ api_view((['POST']))
 def logout(request):
     if request.method == 'POST':
         response = Response(data="Logout successful!",
@@ -63,7 +63,7 @@ def logout(request):
         return response
 
 
-@api_view(['GET'])
+@ api_view(['GET'])
 def get_author_details(request):
     if request.method == 'GET':
         token = request.COOKIES.get('token')
@@ -82,17 +82,17 @@ def get_author_details(request):
             return Response(data="Token expired!", status=status.HTTP_401_UNAUTHORIZED)
 
 
-@api_view(['GET'])
+@ api_view(['GET'])
 def get_author(request, id):
     return Response(data="get single author")
 
 
-@api_view(['GET'])
+@ api_view(['GET'])
 def get_authors(request):
     return Response(data="get many authors")
 
 
-@api_view(['POST', 'GET'])
+@ api_view(['POST', 'GET'])
 def posts(request, author_id):
     # TODO: authorization check
     # TODO: permission check
@@ -124,7 +124,7 @@ def posts(request, author_id):
             return Response(data=f"Author with id: {author_id} does not exist", status=status.HTTP_404_NOT_FOUND)
 
 
-@api_view(['POST', 'GET', 'DELETE', 'PUT'])
+@ api_view(['POST', 'GET', 'DELETE', 'PUT'])
 def post(request, author_id, post_id):
     # TODO: authorization check
     # TODO: permission check
@@ -174,7 +174,7 @@ def post(request, author_id, post_id):
         return Response(data=affected_rows[0])
 
 
-@api_view(['POST', 'GET'])
+@ api_view(['POST', 'GET'])
 def comments(request, author_id, post_id):
     # TODO: authorization check
     # TODO: permission check
@@ -222,7 +222,7 @@ def comments(request, author_id, post_id):
         return Response(data=comment.data)
 
 
-@api_view(['POST', 'GET', 'DELETE'])
+@ api_view(['POST', 'GET', 'DELETE'])
 def inbox(request, id):
     if request.method == 'POST':
         data = request.data
@@ -316,21 +316,21 @@ def inbox(request, id):
         return Response(f"Cleared inbox for author with id: {id}")
 
 
-@api_view(['GET'])
+@ api_view(['GET'])
 def post_likes(request, author_id, post_id):
     post_likes = PostLike.objects.filter(post_id=post_id)
     serialized_post_like = PostLikeSerializer(post_likes, many=True)
     return Response(data=serialized_post_like.data)
 
 
-@api_view(['GET'])
+@ api_view(['GET'])
 def comment_likes(request, author_id, post_id, comment_id):
     comment_likes = CommentLike.objects.filter(comment_id=comment_id)
     serialized_comment_like = CommentLikeSerializer(comment_likes, many=True)
     return Response(data=serialized_comment_like.data)
 
 
-@api_view(['GET'])
+@ api_view(['GET'])
 def liked(request, id):
     liked_comments = CommentLike.objects.filter(author_id=id)
     liked_posts = PostLike.objects.filter(author_id=id)
@@ -348,7 +348,7 @@ def liked(request, id):
     return Response(data)
 
 
-@api_view(['GET'])
+@ api_view(['GET'])
 def followers(request, author_id):
     if request.method == 'GET':
         try:
@@ -369,7 +369,7 @@ def followers(request, author_id):
             return Response(status=status.HTTP_404_NOT_FOUND)
 
 
-@api_view(['GET', 'DELETE', 'PUT'])
+@ api_view(['GET', 'DELETE', 'PUT'])
 def author_followers(request, author_id, foreign_author_id):
 
     if request.method == 'GET':

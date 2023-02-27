@@ -1,3 +1,5 @@
+import uuid
+
 from rest_framework import serializers
 from django.contrib.auth.hashers import make_password
 
@@ -13,6 +15,11 @@ class AuthorSerializer(serializers.ModelSerializer):
         extra_kwargs = {'password': {'write_only': True}}
 
     def create(self, validated_data):
+        id = uuid.uuid4()
+        validated_data['id'] = f"{HOST}/authors/{id}"
+        validated_data['url'] = f"{HOST}/authors/{id}"
+        validated_data['host'] = f"{HOST}/"
+        validated_data['profile_image'] = f"https://multiavatar.com/{id}"
         # hash password
         validated_data['password'] = make_password(validated_data['password'])
         return Author.objects.create(**validated_data)
