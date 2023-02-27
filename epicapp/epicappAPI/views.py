@@ -16,7 +16,7 @@ from .config import HOST
 from .serializers import AuthorSerializer, PostSerializer, CommentSerializer, PostLikeSerializer, CommentLikeSerializer, InboxSerializer, FollowerSerializer
 
 
-@swagger_auto_schema(method='post', operation_description="Signup")
+@swagger_auto_schema(method='post', operation_description="Signup", request_body=AuthorSerializer)
 @api_view((['POST']))
 def register(request):
     if request.method == 'POST':
@@ -71,7 +71,7 @@ def logout(request):
         return response
 
 
-@swagger_auto_schema(method='get', operation_description="Get details of author")
+@swagger_auto_schema(method='get', operation_description="Get details of author", responses={200: AuthorSerializer})
 @api_view(['GET'])
 def get_author_details(request):
     if request.method == 'GET':
@@ -101,8 +101,8 @@ def get_authors(request):
     return Response(data="get many authors")
 
 
-@swagger_auto_schema(method='get', operation_description="Get a list of posts (paginated)")
-@swagger_auto_schema(method='post', operation_description="Create a post")
+@swagger_auto_schema(method='get', operation_description="Get a list of posts (paginated)", responses={200: PostSerializer(many=True)})
+@swagger_auto_schema(method='post', operation_description="Create a post", request_body=PostSerializer, responses={200: PostSerializer})
 @api_view(['POST', 'GET'])
 def posts(request, author_id):
     # TODO: authorization check
@@ -135,10 +135,10 @@ def posts(request, author_id):
             return Response(data=f"Author with id: {author_id} does not exist", status=status.HTTP_404_NOT_FOUND)
 
 
-@swagger_auto_schema(method='put', operation_description="Create a post with a given id")
-@swagger_auto_schema(method='get', operation_description="Get a post by id")
+@swagger_auto_schema(method='put', operation_description="Create a post with a given id", request_body=PostSerializer, responses={200: PostSerializer})
+@swagger_auto_schema(method='get', operation_description="Get a post by id", responses={200: PostSerializer})
 @swagger_auto_schema(method='delete', operation_description="Delete a post")
-@swagger_auto_schema(method='post', operation_description="Update a post")
+@swagger_auto_schema(method='post', operation_description="Update a post", request_body=PostSerializer, responses={200: PostSerializer})
 @api_view(['POST', 'GET', 'DELETE', 'PUT'])
 def post(request, author_id, post_id):
     # TODO: authorization check
@@ -189,8 +189,8 @@ def post(request, author_id, post_id):
         return Response(data=affected_rows[0])
 
 
-@swagger_auto_schema(method='post', operation_description="Comment on a post")
-@swagger_auto_schema(method='get', operation_description="Get a comment")
+@swagger_auto_schema(method='post', operation_description="Comment on a post", request_body=CommentSerializer, responses={200: CommentSerializer})
+@swagger_auto_schema(method='get', operation_description="Get a comment", responses={200: CommentSerializer(many=True)})
 @api_view(['POST', 'GET'])
 def comments(request, author_id, post_id):
     # TODO: authorization check
@@ -239,7 +239,7 @@ def comments(request, author_id, post_id):
         return Response(data=comment.data)
 
 
-@swagger_auto_schema(method='post', operation_description="Send an object to inbox")
+@swagger_auto_schema(method='post', operation_description="Send an object to inbox, see https://github.com/abramhindle/CMPUT404-project-socialdistribution/blob/master/project.org#inbox")
 @swagger_auto_schema(method='get', operation_description="Get a list of objects from inbox")
 @swagger_auto_schema(method='delete', operation_description="Clear inbox")
 @api_view(['POST', 'GET', 'DELETE'])
@@ -336,7 +336,7 @@ def inbox(request, id):
         return Response(f"Cleared inbox for author with id: {id}")
 
 
-@swagger_auto_schema(method='get', operation_description="Like a post")
+@swagger_auto_schema(method='get', operation_description="get likes from a post", responses={200: PostLikeSerializer(many=True)})
 @api_view(['GET'])
 def post_likes(request, author_id, post_id):
     post_likes = PostLike.objects.filter(post_id=post_id)
@@ -344,7 +344,7 @@ def post_likes(request, author_id, post_id):
     return Response(data=serialized_post_like.data)
 
 
-@swagger_auto_schema(method='get', operation_description="get likes from a comment")
+@swagger_auto_schema(method='get', operation_description="get likes from a comment", responses={200: CommentLikeSerializer(many=True)})
 @api_view(['GET'])
 def comment_likes(request, author_id, post_id, comment_id):
     comment_likes = CommentLike.objects.filter(comment_id=comment_id)

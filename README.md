@@ -12,3 +12,7 @@ Instagram but more epic
 4. Activate virtual with environment with (MacOS) `source env/bin/active` or (Windows) `env/scripts/activate`
 5. install requirements with `pip install -r requirements.txt`
 6. cd into app `cd epicapp` and run `python manage.py runserver`
+
+# Docs
+
+Run the app and check localhost:8000/swagger
