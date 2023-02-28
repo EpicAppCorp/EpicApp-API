@@ -1,5 +1,4 @@
 import jwt
-import uuid
 import datetime
 
 from rest_framework.decorators import api_view
@@ -20,6 +19,7 @@ from .serializers import AuthorSerializer, PostSerializer, CommentSerializer, Po
 @api_view((['POST']))
 def register(request):
     if request.method == 'POST':
+
         author = AuthorSerializer(data=request.data)
 
         if not author.is_valid():
@@ -27,7 +27,7 @@ def register(request):
 
         author.save()
 
-        return Response(author.data)
+        return Response(author.data, status=status.HTTP_201_CREATED)
 
 
 @swagger_auto_schema(method='post', operation_description="Login")
@@ -91,12 +91,12 @@ def get_author_details(request):
             return Response(data="Token expired!", status=status.HTTP_401_UNAUTHORIZED)
 
 
-@api_view(['GET'])
+@ api_view(['GET'])
 def get_author(request, id):
     return Response(data="get single author")
 
 
-@api_view(['GET'])
+@ api_view(['GET'])
 def get_authors(request):
     return Response(data="get many authors")
 
@@ -371,7 +371,8 @@ def liked(request, id):
     return Response(data)
 
 
-@api_view(['GET'])
+@swagger_auto_schema(method='get', operation_description="Get a list of followers of an author", responses={200: {"type": "followers", "items": AuthorSerializer(many=True)}})
+@ api_view(['GET'])
 def followers(request, author_id):
     if request.method == 'GET':
         try:
@@ -392,7 +393,10 @@ def followers(request, author_id):
             return Response(status=status.HTTP_404_NOT_FOUND)
 
 
-@api_view(['GET', 'DELETE', 'PUT'])
+@swagger_auto_schema(method='get', operation_description="See if foreign_author_id follows author_id", responses={200, 404})
+@swagger_auto_schema(method='delete', operation_description="foreign_author_id unfollows author_id", responses={200})
+@swagger_auto_schema(method='put', operation_description="adds foreign_author_id as a follower of author_id",  responses={200, 400})
+@ api_view(['GET', 'DELETE', 'PUT'])
 def author_followers(request, author_id, foreign_author_id):
 
     if request.method == 'GET':

@@ -32,7 +32,7 @@ urlpatterns = [
     # followers
     path('authors/<str:author_id>/followers/',
          views.followers, name="get followers endpoint"),
-    path('authors/<str:author_id>/followers/<str:foreign_author_id>',
+    path('authors/<str:author_id>/followers/<path:foreign_author_id>',
          views.author_followers, name="following endpoint"),
 
 ]

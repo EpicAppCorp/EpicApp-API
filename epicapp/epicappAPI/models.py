@@ -8,11 +8,12 @@ from django.contrib.contenttypes.models import ContentType
 
 
 class Author(AbstractUser):
-    type = "author"
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    host = models.CharField(max_length=255)
+    type = models.CharField(max_length=255, default="author", editable=False)
+    id = models.CharField(primary_key=True, max_length=255,
+                          default=uuid.uuid4, editable=False)
+    host = models.URLField(blank=False, editable=False)
     displayName = models.CharField(unique=True, max_length=36)
-    url = models.CharField(max_length=255)
+    url = models.URLField(blank=False, editable=False)
     password = models.CharField(max_length=255)
     github = models.URLField(unique=True)
     profile_image = models.TextField()
