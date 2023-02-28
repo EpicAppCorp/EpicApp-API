@@ -8,6 +8,8 @@ from .config import HOST
 
 
 class AuthorSerializer(serializers.ModelSerializer):
+    profile_image = serializers.CharField(required=False)
+
     class Meta:
         model = Author
         fields = ['type', 'id', 'host', 'displayName',
@@ -16,10 +18,10 @@ class AuthorSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         id = uuid.uuid4()
-        validated_data['id'] = f"{HOST}/authors/{id}"
+        validated_data['id'] = id
         validated_data['url'] = f"{HOST}/authors/{id}"
         validated_data['host'] = f"{HOST}/"
-        validated_data['profile_image'] = f"https://multiavatar.com/{id}"
+        validated_data['profile_image'] = f"https://api.multiavatar.com/{id}.png"
         # hash password
         validated_data['password'] = make_password(validated_data['password'])
         return Author.objects.create(**validated_data)
