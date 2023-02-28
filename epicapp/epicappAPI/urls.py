@@ -29,9 +29,9 @@ urlpatterns = [
     path('authors/<str:id>/inbox', views.inbox, name='inbox'),
 
     # followers
-    path('authors/<path:author_id>/followers/',
+    path('authors/<str:author_id>/followers/',
          views.followers, name="get followers endpoint"),
-    path('authors/<path:author_id>/followers/<path:foreign_author_id>',
+    path('authors/<str:author_id>/followers/<path:foreign_author_id>',
          views.author_followers, name="following endpoint"),
 
 ]
