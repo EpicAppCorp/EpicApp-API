@@ -371,7 +371,7 @@ def liked(request, id):
     return Response(data)
 
 
-@swagger_auto_schema(method='get', operation_description="Get a list of followers of an author", responses={200: {"type": "followers", "items": AuthorSerializer(many=True)}})
+@swagger_auto_schema(method='get', operation_description="Get a list of followers of an author", responses={200: AuthorSerializer(many=True)})
 @ api_view(['GET'])
 def followers(request, author_id):
     if request.method == 'GET':
@@ -393,9 +393,9 @@ def followers(request, author_id):
             return Response(status=status.HTTP_404_NOT_FOUND)
 
 
-@swagger_auto_schema(method='get', operation_description="See if foreign_author_id follows author_id", responses={200, 404})
-@swagger_auto_schema(method='delete', operation_description="foreign_author_id unfollows author_id", responses={200})
-@swagger_auto_schema(method='put', operation_description="adds foreign_author_id as a follower of author_id",  responses={200, 400})
+@swagger_auto_schema(method='get', operation_description="See if foreign_author_id follows author_id")
+@swagger_auto_schema(method='delete', operation_description="foreign_author_id unfollows author_id")
+@swagger_auto_schema(method='put', operation_description="adds foreign_author_id as a follower of author_id")
 @ api_view(['GET', 'DELETE', 'PUT'])
 def author_followers(request, author_id, foreign_author_id):
 
