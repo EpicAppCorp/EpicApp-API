@@ -8,13 +8,13 @@ urlpatterns = [
     path('auth/logout/', views.logout, name='logout'),
 
     # authors
-    path('author/details/', views.get_author_details, name='get_author_details'),
+    path('author/details/', views.get_author_details, name='get_author_details'), # get currently authenticated author
     path('author/<str:id>', views.get_author, name='get_author'),
-    path('authors/', views.get_authors, name='get_authors'),
+    path('authors', views.get_authors, name='get_authors'),
 
     # posts
-    path('authors/<str:author_id>/posts', views.posts, name='posts endpoint'),
-    path('authors/<str:author_id>/posts/<str:post_id>', views.post, name='post endpoint'),
+    path('authors/<str:author_id>/posts', views.posts, name='posts_endpoint'),
+    path('authors/<str:author_id>/posts/<str:post_id>', views.post, name='post_endpoint'),
     path('authors/<str:author_id>/posts/<str:post_id>/comments',
          views.comments, name="post endpoint"),
     path('authors/<str:author_id>/posts/<str:post_id>/likes',
