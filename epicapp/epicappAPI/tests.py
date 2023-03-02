@@ -1,3 +1,5 @@
+import datetime
+
 from django.test import TestCase
 from rest_framework import status
 from django.urls import reverse
@@ -9,7 +11,7 @@ class AuthTests(APITestCase):
         url = reverse('register')
         data = {"displayName":"testname", "password": "test", "github": "https://github.com/shanerrr"}
         response = self.client.post(url, data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(Author.objects.count(), 1)
         self.assertEqual(Author.objects.get().displayName, 'testname')
 
@@ -158,11 +160,124 @@ class PostTests(APITestCase):
 
 
 class CommentTests(APITestCase):
-    pass
+    def test_comment_on_post(self):
+        author = Author.objects.create(displayName="testname", password="test", github="https://github.com/shanerrr")
+        post = Post.objects.create(
+            title="bruh",
+            source="http://localhost:8000",
+            origin="http://localhost:8000",
+            description="sldfkjkldsjflks",
+            contentType="text/plain",
+            content="something stufnsdfjl",
+            author_id=str(author.id)
+        )
+
+        comment_data = {
+            "type":"comment",
+            "author": {
+                "type": "author",
+                "id": str(author.id),
+                "host": "http://localhost:8000",
+                "displayName": "testusername",
+                "url": "http://localhost:8000",
+                "github": "githubsthff",
+                "profile_image": "more images stuff"
+            },
+            "comment":"Sick Olde English",
+            "contentType":"text/markdown",
+            "published":"2015-03-09T13:07:04+00:00",
+        }
+
+        response = self.client.post(f"/api/authors/{str(author.id)}/posts/{str(post.id)}/comments", comment_data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['comment'], 'Sick Olde English')
+
+    def test_get_comments_on_post(self):
+        author = Author.objects.create(displayName="testname", password="test", github="https://github.com/shanerrr")
+        post = Post.objects.create(
+            title="bruh",
+            source="http://localhost:8000",
+            origin="http://localhost:8000",
+            description="sldfkjkldsjflks",
+            contentType="text/plain",
+            content="something stufnsdfjl",
+            author_id=str(author.id)
+        )
+        comment = Comment.objects.create(
+            comment="comment text",
+            published=datetime.datetime.now(),
+            post_id=str(post.id),
+            author_id=str(author.id)
+        )
+        response = self.client.get(f"/api/authors/{str(author.id)}/posts/{str(post.id)}/comments", format='json')
+        self.assertEqual(len(response.data['comments']), 1)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
 
 
 class LikeTests(APITestCase):
-    pass
+    def test_like_post(self):
+        author = Author.objects.create(displayName="testname", password="test", github="https://github.com/shanerrr")
+        post = Post.objects.create(
+            title="bruh",
+            source="http://localhost:8000",
+            origin="http://localhost:8000",
+            description="sldfkjkldsjflks",
+            contentType="text/plain",
+            content="something stufnsdfjl",
+            author_id=str(author.id)
+        )
+        data = {
+            "@context": "https://www.w3.org/ns/activitystreams",
+            "summary": "Lara Croft Likes your post",         
+            "type": "Like",
+            "author": {
+                "type": "author",
+                "id": str(author.id),
+                "host": "http://localhost:8000",
+                "displayName": "testusername",
+                "url": "http://localhost:8000",
+                "github": "githubsthff",
+                "profile_image": "more images stuff"
+            },
+            "object": f"http://127.0.0.1:5454/authors/{str(author.id)}/posts/{str(post.id)}"
+        }
+        response = self.client.post(f"/api/authors/{str(author.id)}/inbox", data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK) 
+
+    def test_like_comment(self):
+        author = Author.objects.create(displayName="testname", password="test", github="https://github.com/shanerrr")
+        post = Post.objects.create(
+            title="bruh",
+            source="http://localhost:8000",
+            origin="http://localhost:8000",
+            description="sldfkjkldsjflks",
+            contentType="text/plain",
+            content="something stufnsdfjl",
+            author_id=str(author.id)
+        )
+        comment = Comment.objects.create(
+            comment="comment text",
+            published=datetime.datetime.now(),
+            post_id=str(post.id),
+            author_id=str(author.id)
+        )
+        data = {
+            "@context": "https://www.w3.org/ns/activitystreams",
+            "summary": "Lara Croft Likes your post",         
+            "type": "Like",
+            "author": {
+                "type": "author",
+                "id": str(author.id),
+                "host": "http://localhost:8000",
+                "displayName": "testusername",
+                "url": "http://localhost:8000",
+                "github": "githubsthff",
+                "profile_image": "more images stuff"
+            },
+            "object": f"http://127.0.0.1:5454/authors/{str(author.id)}/posts/{str(post.id)}/comments/{str(comment.id)}"
+        }
+        response = self.client.post(f"/api/authors/{str(author.id)}/inbox", data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK) 
 
 
 class FollowerTests(APITestCase):
