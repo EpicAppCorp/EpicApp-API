@@ -1,4 +1,5 @@
 import jwt
+import uuid
 import datetime
 
 from rest_framework.decorators import api_view
@@ -83,7 +84,7 @@ def get_author_details(request):
         try:
             payload = jwt.decode(
                 token, 'SECRET_NOT_USING_ENV_CAUSE_WHO_CARES', algorithms=['HS256'])
-            print(payload)
+
             author = Author.objects.filter(id=payload['id']).first()
             return Response(data=AuthorSerializer(author).data, status=status.HTTP_200_OK)
 
@@ -91,15 +92,24 @@ def get_author_details(request):
             return Response(data="Token expired!", status=status.HTTP_401_UNAUTHORIZED)
 
 
-@ api_view(['GET'])
+@api_view(['GET'])
 def get_author(request, id):
-    return Response(data="get single author")
+    if request.method == 'GET':
+        author = Author.objects.filter(id=id).first()
+        return Response(data=AuthorSerializer(author).data, status=status.HTTP_200_OK)
 
 
-@ api_view(['GET'])
+@api_view(['GET'])
 def get_authors(request):
-    return Response(data="get many authors")
+    if request.method == 'GET':
+        page = int(request.GET.get('page', 1))
+        size = int(request.GET.get('size', 5))
 
+        offset = (page - 1) * size
+        authors = Author.objects.all()[
+            offset:offset+size]
+        serialized_authors = AuthorSerializer(authors, many=True)
+        return Response(data=serialized_authors.data)
 
 @swagger_auto_schema(method='get', operation_description="Get a list of posts (paginated)", responses={200: PostSerializer(many=True)})
 @swagger_auto_schema(method='post', operation_description="Create a post", request_body=PostSerializer, responses={200: PostSerializer})
@@ -317,7 +327,22 @@ def inbox(request, id):
             return Response(data=post.data)
 
         elif type == "comment":
-            return Response("not implemented")
+            # TODO: find a better way to supply post id
+            comment_data = request.data 
+            comment_data["post_id"] = request.data["post_id"]
+            comment_data["author_id"] = request.data["author"]["id"]
+            comment = CommentSerializer(data=comment_data)
+
+            if not comment.is_valid():
+                return Response(data=comment.errors, status=status.HTTP_400_BAD_REQUEST)
+
+            comment.save()
+
+            inbox_item = Inbox(content_object=comment.instance, author_id=id)
+            inbox_item.save()
+
+            return Response(data=comment.data)
+
         elif type == "Follow":
             return Response("not implemented")
 
