@@ -8,7 +8,7 @@ from django.contrib.contenttypes.models import ContentType
 
 
 class Author(AbstractUser):
-    type = "author"
+    type = models.CharField(max_length=255, default="author", editable=False)
     id = models.CharField(primary_key=True, max_length=255,
                           default=uuid.uuid4, editable=False)
     host = models.URLField(blank=False, editable=False)
