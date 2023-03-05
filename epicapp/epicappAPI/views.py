@@ -56,9 +56,10 @@ def authenticate(request):
             }, "SECRET_NOT_USING_ENV_CAUSE_WHO_CARES", algorithm='HS256')
 
         # return an http only cookie, but if needed to make it easier, we can not do http only cookies so JS can use it.
-        response = Response(data="Login successful!",
+        response = Response(data=AuthorSerializer(author).data,
                             status=status.HTTP_200_OK)
-        response.set_cookie(key='token', value=token, httponly=True)
+        response.set_cookie(key='token', value=token,
+                            secure=False, samesite='Strict')
         return response
 
 
@@ -110,6 +111,7 @@ def get_authors(request):
             offset:offset+size]
         serialized_authors = AuthorSerializer(authors, many=True)
         return Response(data=serialized_authors.data)
+
 
 @swagger_auto_schema(method='get', operation_description="Get a list of posts (paginated)", responses={200: PostSerializer(many=True)})
 @swagger_auto_schema(method='post', operation_description="Create a post", request_body=PostSerializer, responses={200: PostSerializer})
@@ -328,7 +330,7 @@ def inbox(request, id):
 
         elif type == "comment":
             # TODO: find a better way to supply post id
-            comment_data = request.data 
+            comment_data = request.data
             comment_data["post_id"] = request.data["post_id"]
             comment_data["author_id"] = request.data["author"]["id"]
             comment = CommentSerializer(data=comment_data)
