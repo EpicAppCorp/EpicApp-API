@@ -58,7 +58,8 @@ def authenticate(request):
         # return an http only cookie, but if needed to make it easier, we can not do http only cookies so JS can use it.
         response = Response(data=AuthorSerializer(author).data,
                             status=status.HTTP_200_OK)
-        response.set_cookie(key='token', value=token, httponly=True)
+        response.set_cookie(key='token', value=token,
+                            secure=False, samesite='Strict')
         return response
 
 
