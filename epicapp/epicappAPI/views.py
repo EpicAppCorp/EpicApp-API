@@ -58,7 +58,7 @@ def authenticate(request):
         # return an http only cookie, but if needed to make it easier, we can not do http only cookies so JS can use it.
         response = Response(data=AuthorSerializer(author).data,
                             status=status.HTTP_200_OK)
-        response.set_cookie(key='token', value=token,
+        response.set_cookie(key='access', value=token,
                             secure=False, samesite='Strict')
         return response
 
@@ -69,7 +69,7 @@ def logout(request):
     if request.method == 'POST':
         response = Response(data="Logout successful!",
                             status=status.HTTP_200_OK)
-        response.delete_cookie('token')
+        response.delete_cookie('access')
         return response
 
 
@@ -77,7 +77,7 @@ def logout(request):
 @api_view(['GET'])
 def get_author_details(request):
     if request.method == 'GET':
-        token = request.COOKIES.get('token')
+        token = request.COOKIES.get('access')
 
         if not token:
             return Response(data="Unauthenticated!", status=status.HTTP_401_UNAUTHORIZED)
