@@ -349,7 +349,7 @@ def inbox(request, id):
             return Response("not implemented")
 
     elif request.method == 'GET':
-        inbox_items = Inbox.objects.filter(author_id=id)
+        inbox_items = Inbox.objects.filter(author_id=id).order_by('-created_at')
         serialized_inbox_items = InboxSerializer(inbox_items, many=True)
         data = {
             "type": "inbox",
