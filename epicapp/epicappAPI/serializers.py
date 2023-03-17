@@ -21,7 +21,7 @@ class AuthorSerializer(serializers.ModelSerializer):
         validated_data['id'] = id
         validated_data['url'] = f"{HOST}/authors/{id}"
         validated_data['host'] = f"{HOST}/"
-        validated_data['profile_image'] = f"https://api.multiavatar.com/{id}.png"
+        validated_data['profile_image'] = f"https://api.multiavatar.com/{id}.svg"
         # hash password
         validated_data['password'] = make_password(validated_data['password'])
         return Author.objects.create(**validated_data)
