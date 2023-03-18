@@ -13,6 +13,8 @@ from drf_yasg import openapi
 
 from .models import Author, Post, Comment, PostLike, CommentLike, Inbox, Follower
 from .config import HOST
+from .utils import decode_token
+from .exceptions import UnauthenticatedError, InvalidTokenError, ExpiredTokenError
 from .serializers import AuthorSerializer, PostSerializer, CommentSerializer, PostLikeSerializer, CommentLikeSerializer, InboxSerializer, FollowerSerializer
 
 
@@ -76,25 +78,26 @@ def logout(request):
 @swagger_auto_schema(method='get', operation_description="Get details of author", responses={200: AuthorSerializer})
 @api_view(['GET'])
 def get_author_details(request):
+    token = request.COOKIES.get('access')
+    payload = None
+    try:
+        payload = decode_token(token)
+    except (UnauthenticatedError, InvalidTokenError, ExpiredTokenError) as err:
+        return Response(data=str(err), status=status.HTTP_401_UNAUTHORIZED)
+
     if request.method == 'GET':
-        token = request.COOKIES.get('access')
-
-        if not token:
-            return Response(data="Unauthenticated!", status=status.HTTP_401_UNAUTHORIZED)
-
-        try:
-            payload = jwt.decode(
-                token, 'SECRET_NOT_USING_ENV_CAUSE_WHO_CARES', algorithms=['HS256'])
-
-            author = Author.objects.filter(id=payload['id']).first()
-            return Response(data=AuthorSerializer(author).data, status=status.HTTP_200_OK)
-
-        except jwt.ExpiredSignatureError:
-            return Response(data="Token expired!", status=status.HTTP_401_UNAUTHORIZED)
-
+        author = Author.objects.filter(id=payload['id']).first()
+        return Response(data=AuthorSerializer(author).data, status=status.HTTP_200_OK)
 
 @api_view(['GET'])
 def get_author(request, id):
+    token = request.COOKIES.get('access')
+    payload = None
+    try:
+        payload = decode_token(token)
+    except (UnauthenticatedError, InvalidTokenError, ExpiredTokenError) as err:
+        return Response(data=str(err), status=status.HTTP_401_UNAUTHORIZED)
+
     if request.method == 'GET':
         author = Author.objects.filter(id=id).first()
         return Response(data=AuthorSerializer(author).data, status=status.HTTP_200_OK)
@@ -102,6 +105,13 @@ def get_author(request, id):
 
 @api_view(['GET'])
 def get_authors(request):
+    token = request.COOKIES.get('access')
+    payload = None
+    try:
+        payload = decode_token(token)
+    except (UnauthenticatedError, InvalidTokenError, ExpiredTokenError) as err:
+        return Response(data=str(err), status=status.HTTP_401_UNAUTHORIZED)
+
     if request.method == 'GET':
         page = int(request.GET.get('page', 1))
         size = int(request.GET.get('size', 5))
@@ -117,7 +127,13 @@ def get_authors(request):
 @swagger_auto_schema(method='post', operation_description="Create a post", request_body=PostSerializer, responses={200: PostSerializer})
 @api_view(['POST', 'GET'])
 def posts(request, author_id):
-    # TODO: authorization check
+    token = request.COOKIES.get('access')
+    payload = None
+    try:
+        payload = decode_token(token)
+    except (UnauthenticatedError, InvalidTokenError, ExpiredTokenError) as err:
+        return Response(data=str(err), status=status.HTTP_401_UNAUTHORIZED)
+
     # TODO: permission check
 
     if request.method == 'POST':
@@ -153,7 +169,13 @@ def posts(request, author_id):
 @swagger_auto_schema(method='post', operation_description="Update a post", request_body=PostSerializer, responses={200: PostSerializer})
 @api_view(['POST', 'GET', 'DELETE', 'PUT'])
 def post(request, author_id, post_id):
-    # TODO: authorization check
+    token = request.COOKIES.get('access')
+    payload = None
+    try:
+        payload = decode_token(token)
+    except (UnauthenticatedError, InvalidTokenError, ExpiredTokenError) as err:
+        return Response(data=str(err), status=status.HTTP_401_UNAUTHORIZED)
+
     # TODO: permission check
 
     if request.method == 'PUT':
@@ -171,11 +193,23 @@ def post(request, author_id, post_id):
 
     elif request.method == 'GET':
         try:
+            author = Author.objects.get(id=author_id)
             post = Post.objects.get(id=post_id)
+            if post.visibility == Post.Visibility.FRIENDS:
+                # ! note: this might change depending if we store foreign authors from friend requests
+                followers_of_author = Follower.objects.filter(author=post.author.id, follower="864decb1-ed95-4c85-b189-2e5216844853")
+                # print(followers_of_author)
+                if len(followers_of_author) == 0:
+                    return Response(data="You don't have permission to view this post", status=status.HTTP_401_UNAUTHORIZED)
             serialized_post = PostSerializer(post)
+
             return Response(data=serialized_post.data)
         except Post.DoesNotExist as e:
-            return Response(data=e, status=status.HTTP_404_NOT_FOUND)
+            return Response(data="Post does not exist", status=status.HTTP_404_NOT_FOUND)
+        except Author.DoesNotExist as e:
+            return Response(data="Author does not exist", status=status.HTTP_404_NOT_FOUND)
+        except Follower.DoesNotExist as e:
+            return Response(data="bruh", status=status.HTTP_404_NOT_FOUND)
 
     elif request.method == 'POST':
         try:
@@ -205,7 +239,13 @@ def post(request, author_id, post_id):
 @swagger_auto_schema(method='get', operation_description="Get a comment", responses={200: CommentSerializer(many=True)})
 @api_view(['POST', 'GET'])
 def comments(request, author_id, post_id):
-    # TODO: authorization check
+    token = request.COOKIES.get('access')
+    payload = None
+    try:
+        payload = decode_token(token)
+    except (UnauthenticatedError, InvalidTokenError, ExpiredTokenError) as err:
+        return Response(data=str(err), status=status.HTTP_401_UNAUTHORIZED)
+
     # TODO: permission check
 
     if request.method == 'GET':
@@ -256,6 +296,13 @@ def comments(request, author_id, post_id):
 @swagger_auto_schema(method='delete', operation_description="Clear inbox")
 @api_view(['POST', 'GET', 'DELETE'])
 def inbox(request, id):
+    token = request.COOKIES.get('access')
+    payload = None
+    try:
+        payload = decode_token(token)
+    except (UnauthenticatedError, InvalidTokenError, ExpiredTokenError) as err:
+        return Response(data=str(err), status=status.HTTP_401_UNAUTHORIZED)
+
     if request.method == 'POST':
         data = request.data
         type = data["type"]
@@ -366,6 +413,13 @@ def inbox(request, id):
 @swagger_auto_schema(method='get', operation_description="get likes from a post", responses={200: PostLikeSerializer(many=True)})
 @api_view(['GET'])
 def post_likes(request, author_id, post_id):
+    token = request.COOKIES.get('access')
+    payload = None
+    try:
+        payload = decode_token(token)
+    except (UnauthenticatedError, InvalidTokenError, ExpiredTokenError) as err:
+        return Response(data=str(err), status=status.HTTP_401_UNAUTHORIZED)
+
     post_likes = PostLike.objects.filter(post_id=post_id)
     serialized_post_like = PostLikeSerializer(post_likes, many=True)
     return Response(data=serialized_post_like.data)
@@ -374,6 +428,13 @@ def post_likes(request, author_id, post_id):
 @swagger_auto_schema(method='get', operation_description="get likes from a comment", responses={200: CommentLikeSerializer(many=True)})
 @api_view(['GET'])
 def comment_likes(request, author_id, post_id, comment_id):
+    token = request.COOKIES.get('access')
+    payload = None
+    try:
+        payload = decode_token(token)
+    except (UnauthenticatedError, InvalidTokenError, ExpiredTokenError) as err:
+        return Response(data=str(err), status=status.HTTP_401_UNAUTHORIZED)
+
     comment_likes = CommentLike.objects.filter(comment_id=comment_id)
     serialized_comment_like = CommentLikeSerializer(comment_likes, many=True)
     return Response(data=serialized_comment_like.data)
@@ -382,6 +443,13 @@ def comment_likes(request, author_id, post_id, comment_id):
 @swagger_auto_schema(method='get', operation_description="get objects an author has liked")
 @api_view(['GET'])
 def liked(request, id):
+    token = request.COOKIES.get('access')
+    payload = None
+    try:
+        payload = decode_token(token)
+    except (UnauthenticatedError, InvalidTokenError, ExpiredTokenError) as err:
+        return Response(data=str(err), status=status.HTTP_401_UNAUTHORIZED)
+
     liked_comments = CommentLike.objects.filter(author_id=id)
     liked_posts = PostLike.objects.filter(author_id=id)
 
@@ -401,6 +469,14 @@ def liked(request, id):
 @swagger_auto_schema(method='get', operation_description="Get a list of followers of an author", responses={200: AuthorSerializer(many=True)})
 @ api_view(['GET'])
 def followers(request, author_id):
+    token = request.COOKIES.get('access')
+    payload = None
+    try:
+        payload = decode_token(token)
+    except (UnauthenticatedError, InvalidTokenError, ExpiredTokenError) as err:
+        return Response(data=str(err), status=status.HTTP_401_UNAUTHORIZED)
+
+
     if request.method == 'GET':
         try:
             followers = Follower.objects.filter(author=author_id)
@@ -425,6 +501,13 @@ def followers(request, author_id):
 @swagger_auto_schema(method='put', operation_description="adds foreign_author_id as a follower of author_id")
 @ api_view(['GET', 'DELETE', 'PUT'])
 def author_followers(request, author_id, foreign_author_id):
+    token = request.COOKIES.get('access')
+    payload = None
+    try:
+        payload = decode_token(token)
+    except (UnauthenticatedError, InvalidTokenError, ExpiredTokenError) as err:
+        return Response(data=str(err), status=status.HTTP_401_UNAUTHORIZED)
+
 
     if request.method == 'GET':
         try:
