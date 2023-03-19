@@ -370,184 +370,205 @@ class CommentsView(APIView):
         return Response(data=comment.data)
 
 
-# @swagger_auto_schema(method='post', operation_description="Send an object to inbox, see https://github.com/abramhindle/CMPUT404-project-socialdistribution/blob/master/project.org#inbox")
-# @swagger_auto_schema(method='get', operation_description="Get a list of objects from inbox")
-# @swagger_auto_schema(method='delete', operation_description="Clear inbox")
-# @api_view(['POST', 'GET', 'DELETE'])
-# def inbox(request, id):
-#     token = request.COOKIES.get('access')
-#     payload = None
-#     try:
-#         payload = decode_token(token)
-#     except (UnauthenticatedError, InvalidTokenError, ExpiredTokenError) as err:
-#         return Response(data=str(err), status=status.HTTP_401_UNAUTHORIZED)
+class InboxView(APIView):
+    @swagger_auto_schema(
+        responses={
+            "200": openapi.Response(
+                description="OK",
+                examples={
+                    "application/json":
+                    SwaggerShape.inbox_list
+                }
+            )
+        }
+    )
+    @authenticated
+    def get(self, request, id):
+        inbox_items = Inbox.objects.filter(
+            author_id=id).order_by('-created_at')
+        serialized_inbox_items = InboxSerializer(inbox_items, many=True)
+        data = {
+            "type": "inbox",
+            "author": f"{HOST}/authors/{id}",
+            "items": serialized_inbox_items.data
+        }
+        return Response(data)
 
-#     if request.method == 'POST':
-#         data = request.data
-#         type = data["type"]
+    @swagger_auto_schema(
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties=SwaggerShape.follow_request_body
+        ),
+        responses={
+            "200": openapi.Response(
+                description="OK",
+            )
+        }
+    )
+    @authenticated
+    def post(self, request, id):
+        data = request.data
+        type = data["type"]
 
-#         if type == "Like":
-#             data['author_id'] = id
-#             url_components = data['object'].split('/')
-#             object_id = url_components[-1]
+        if type == "Like":
+            data['author_id'] = id
+            url_components = data['object'].split('/')
+            object_id = url_components[-1]
 
-#             if url_components[-2] == "posts":
-#                 try:
-#                     Post.objects.get(id=object_id)
-#                 except Post.DoesNotExist:
-#                     return Response(data="Post does not exist", status=status.HTTP_400_BAD_REQUEST)
+            if url_components[-2] == "posts":
+                try:
+                    Post.objects.get(id=object_id)
+                except Post.DoesNotExist:
+                    return Response(data="Post does not exist", status=status.HTTP_400_BAD_REQUEST)
 
-#                 data['post_id'] = object_id
-#                 serialized_like = PostLikeSerializer(data=data)
+                data['post_id'] = object_id
+                serialized_like = PostLikeSerializer(data=data)
 
-#                 if not serialized_like.is_valid():
-#                     return Response(data="something went wrong", status=status.HTTP_400_BAD_REQUEST)
+                if not serialized_like.is_valid():
+                    return Response(data="something went wrong", status=status.HTTP_400_BAD_REQUEST)
 
-#                 serialized_like.save()
+                serialized_like.save()
 
-#                 inbox_item = Inbox(
-#                     content_object=serialized_like.instance, author_id=id)
-#                 inbox_item.save()
+                inbox_item = Inbox(
+                    content_object=serialized_like.instance, author_id=id)
+                inbox_item.save()
 
-#                 return Response(data=serialized_like.data)
+                return Response(data=serialized_like.data)
 
-#             elif url_components[-2] == "comments":
-#                 try:
-#                     comment = Comment.objects.get(id=object_id)
-#                 except Post.DoesNotExist:
-#                     return Response(data="Post does not exist", status=status.HTTP_400_BAD_REQUEST)
-#                 except Comment.DoesNotExist:
-#                     return Response(data="Comment does not exist", status=status.HTTP_400_BAD_REQUEST)
+            elif url_components[-2] == "comments":
+                try:
+                    comment = Comment.objects.get(id=object_id)
+                except Post.DoesNotExist:
+                    return Response(data="Post does not exist", status=status.HTTP_400_BAD_REQUEST)
+                except Comment.DoesNotExist:
+                    return Response(data="Comment does not exist", status=status.HTTP_400_BAD_REQUEST)
 
-#                 data['comment_id'] = object_id
-#                 data['post_id'] = url_components[-3]
-#                 serialized_like = CommentLikeSerializer(data=data)
+                data['comment_id'] = object_id
+                data['post_id'] = url_components[-3]
+                serialized_like = CommentLikeSerializer(data=data)
 
-#                 if not serialized_like.is_valid():
-#                     return Response(data="something went wrong", status=status.HTTP_400_BAD_REQUEST)
+                if not serialized_like.is_valid():
+                    return Response(data="something went wrong", status=status.HTTP_400_BAD_REQUEST)
 
-#                 serialized_like.save()
+                serialized_like.save()
 
-#                 inbox_item = Inbox(
-#                     content_object=serialized_like.instance, author_id=id)
-#                 inbox_item.save()
+                inbox_item = Inbox(
+                    content_object=serialized_like.instance, author_id=id)
+                inbox_item.save()
 
-#                 comment_data = serialized_like.data
+                comment_data = serialized_like.data
 
-#                 return Response(data=comment_data)
+                return Response(data=comment_data)
 
-#             else:
-#                 return Response("Wtf you tryna do", status=status.HTTP_400_BAD_REQUEST)
+            else:
+                return Response("Wtf you tryna do", status=status.HTTP_400_BAD_REQUEST)
 
-#         elif type == "post":
-#             post_data = data
-#             post_data["author_id"] = id
-#             post = PostSerializer(data=post_data)
+        elif type == "post":
+            post_data = data
+            post_data["author_id"] = id
+            post = PostSerializer(data=post_data)
 
-#             if not post.is_valid():
-#                 return Response(data=post.errors, status=status.HTTP_400_BAD_REQUEST)
+            if not post.is_valid():
+                return Response(data=post.errors, status=status.HTTP_400_BAD_REQUEST)
 
-#             post.save()
+            post.save()
 
-#             inbox_item = Inbox(content_object=post.instance, author_id=id)
-#             inbox_item.save()
+            inbox_item = Inbox(content_object=post.instance, author_id=id)
+            inbox_item.save()
 
-#             return Response(data=post.data)
+            return Response(data=post.data)
 
-#         elif type == "comment":
-#             # TODO: find a better way to supply post id
-#             comment_data = request.data
-#             comment_data["post_id"] = request.data["post_id"]
-#             comment_data["author_id"] = request.data["author"]["id"]
-#             comment = CommentSerializer(data=comment_data)
+        elif type == "comment":
+            # TODO: find a better way to supply post id
+            comment_data = request.data
+            comment_data["post_id"] = request.data["post_id"]
+            comment_data["author_id"] = request.data["author"]["id"]
+            comment = CommentSerializer(data=comment_data)
 
-#             if not comment.is_valid():
-#                 return Response(data=comment.errors, status=status.HTTP_400_BAD_REQUEST)
+            if not comment.is_valid():
+                return Response(data=comment.errors, status=status.HTTP_400_BAD_REQUEST)
 
-#             comment.save()
+            comment.save()
 
-#             inbox_item = Inbox(content_object=comment.instance, author_id=id)
-#             inbox_item.save()
+            inbox_item = Inbox(content_object=comment.instance, author_id=id)
+            inbox_item.save()
 
-#             return Response(data=comment.data)
+            return Response(data=comment.data)
 
-#         elif type == "Follow":
-#             return Response("not implemented")
+        elif type == "Follow":
+            return Response("not implemented")
 
-#     elif request.method == 'GET':
-#         inbox_items = Inbox.objects.filter(
-#             author_id=id).order_by('-created_at')
-#         serialized_inbox_items = InboxSerializer(inbox_items, many=True)
-#         data = {
-#             "type": "inbox",
-#             "author": f"{HOST}/authors/{id}",
-#             "items": serialized_inbox_items.data
-#         }
-#         return Response(data)
-
-#     elif request.method == 'DELETE':
-#         Inbox.objects.filter(author_id=id).delete()
-#         return Response(f"Cleared inbox for author with id: {id}")
-
-
-# @swagger_auto_schema(method='get', operation_description="get likes from a post", responses={200: PostLikeSerializer(many=True)})
-# @api_view(['GET'])
-# def post_likes(request, author_id, post_id):
-#     token = request.COOKIES.get('access')
-#     payload = None
-#     try:
-#         payload = decode_token(token)
-#     except (UnauthenticatedError, InvalidTokenError, ExpiredTokenError) as err:
-#         return Response(data=str(err), status=status.HTTP_401_UNAUTHORIZED)
-
-#     post_likes = PostLike.objects.filter(post_id=post_id)
-#     serialized_post_like = PostLikeSerializer(post_likes, many=True)
-#     return Response(data=serialized_post_like.data)
-
-
-# @swagger_auto_schema(method='get', operation_description="get likes from a comment", responses={200: CommentLikeSerializer(many=True)})
-# @api_view(['GET'])
-# def comment_likes(request, author_id, post_id, comment_id):
-#     token = request.COOKIES.get('access')
-#     payload = None
-#     try:
-#         payload = decode_token(token)
-#     except (UnauthenticatedError, InvalidTokenError, ExpiredTokenError) as err:
-#         return Response(data=str(err), status=status.HTTP_401_UNAUTHORIZED)
-
-#     comment_likes = CommentLike.objects.filter(comment_id=comment_id)
-#     serialized_comment_like = CommentLikeSerializer(comment_likes, many=True)
-#     return Response(data=serialized_comment_like.data)
+    @authenticated
+    def delete(self, request, id):
+        Inbox.objects.filter(author_id=id).delete()
+        return Response(f"Cleared inbox for author with id: {id}")
 
 
-# @swagger_auto_schema(method='get', operation_description="get objects an author has liked")
-# @api_view(['GET'])
-# def liked(request, id):
-#     token = request.COOKIES.get('access')
-#     payload = None
-#     try:
-#         payload = decode_token(token)
-#     except (UnauthenticatedError, InvalidTokenError, ExpiredTokenError) as err:
-#         return Response(data=str(err), status=status.HTTP_401_UNAUTHORIZED)
-
-#     liked_comments = CommentLike.objects.filter(author_id=id)
-#     liked_posts = PostLike.objects.filter(author_id=id)
-
-#     serialized_liked_comments = CommentLikeSerializer(
-#         liked_comments, many=True)
-#     serialized_liked_posts = PostLikeSerializer(liked_posts, many=True)
-
-#     data = {
-#         "type": "liked",
-#         # TODO: find better way to combine
-#         "items": serialized_liked_posts.data + serialized_liked_comments.data
-#     }
-
-#     return Response(data)
+class LikesView(APIView):
+    @swagger_auto_schema(
+        responses={
+            "200": openapi.Response(
+                description="OK",
+                examples={
+                    "application/json":
+                    SwaggerShape.likes_list
+                }
+            )
+        }
+    )
+    def get(request, author_id, post_id):
+        post_likes = PostLike.objects.filter(post_id=post_id)
+        serialized_post_like = PostLikeSerializer(post_likes, many=True)
+        return Response(data=serialized_post_like.data)
 
 
-# @swagger_auto_schema(method='get', operation_description="Get a list of followers of an author", responses={200: AuthorSerializer(many=True)})
-# @api_view(['GET'])
+class CommentLikesView(APIView):
+    @swagger_auto_schema(
+        responses={
+            "200": openapi.Response(
+                description="OK",
+                examples={
+                    "application/json":
+                    SwaggerShape.likes_list
+                }
+            )
+        }
+    )
+    def get(request, author_id, post_id, comment_id):
+        comment_likes = CommentLike.objects.filter(comment_id=comment_id)
+        serialized_comment_like = CommentLikeSerializer(
+            comment_likes, many=True)
+        return Response(data=serialized_comment_like.data)
+
+
+class LikedView(APIView):
+    @swagger_auto_schema(
+        responses={
+            "200": openapi.Response(
+                description="OK",
+                examples={
+                    "application/json":
+                    SwaggerShape.liked_list
+                }
+            )
+        }
+    )
+    def get(request, id):
+        liked_comments = CommentLike.objects.filter(author_id=id)
+        liked_posts = PostLike.objects.filter(author_id=id)
+
+        serialized_liked_comments = CommentLikeSerializer(
+            liked_comments, many=True)
+        serialized_liked_posts = PostLikeSerializer(liked_posts, many=True)
+
+        data = {
+            "type": "liked",
+            # TODO: find better way to combine
+            "items": serialized_liked_posts.data + serialized_liked_comments.data
+        }
+
+        return Response(data)
+
 
 class FollowersView(APIView):
     @swagger_auto_schema(
