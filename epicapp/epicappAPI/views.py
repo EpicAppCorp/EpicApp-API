@@ -1,7 +1,8 @@
 import jwt
 import datetime
+import base64
+
 from rest_framework.views import APIView
-# from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
 
@@ -99,7 +100,7 @@ class LogoutView(APIView):
             )
         }
     )
-    def post(request):
+    def post(self, request, format=None):
         response = Response(data="Logout successful!",
                             status=status.HTTP_200_OK)
         response.delete_cookie('access')
@@ -118,7 +119,7 @@ class AuthorView(APIView):
             )
         }
     )
-    def get(request, id):
+    def get(self, id, format=None):
         author = Author.objects.filter(id=id).first()
         return Response(data=AuthorSerializer(author).data, status=status.HTTP_200_OK)
 
@@ -135,7 +136,7 @@ class AuthorsView(APIView):
             )
         }
     )
-    def get(request):
+    def get(self, request, format=None):
         page = int(request.GET.get('page', 1))
         size = int(request.GET.get('size', 5))
 
@@ -146,173 +147,227 @@ class AuthorsView(APIView):
         return Response(data=serialized_authors.data)
 
 
-# @swagger_auto_schema(method='get', operation_description="Get a list of posts (paginated)", responses={200: PostSerializer(many=True)})
-# @swagger_auto_schema(method='post', operation_description="Create a post", request_body=PostSerializer, responses={200: PostSerializer})
-# @api_view(['POST', 'GET'])
-# def posts(request, author_id):
-#     token = request.COOKIES.get('access')
-#     payload = None
-#     try:
-#         payload = decode_token(token)
-#     except (UnauthenticatedError, InvalidTokenError, ExpiredTokenError) as err:
-#         return Response(data=str(err), status=status.HTTP_401_UNAUTHORIZED)
+class PostsView(APIView):
+    @swagger_auto_schema(
+        responses={
+            "200": openapi.Response(
+                description="OK",
+                examples={
+                    "application/json":
+                    SwaggerShape.post_list
+                }
+            )
+        }
+    )
+    def get(request, author_id):
+        try:
+            page = int(request.GET.get('page', 1))
+            size = int(request.GET.get('size', 5))
 
-#     # TODO: permission check
+            offset = (page - 1) * size
+            posts = Post.objects.filter(author_id=author_id)[
+                offset:offset+size]
+            serialized_posts = PostSerializer(posts, many=True)
+            return Response(data=serialized_posts.data)
+        except Author.DoesNotExist:
+            return Response(data=f"Author with id: {author_id} does not exist", status=status.HTTP_404_NOT_FOUND)
 
-#     if request.method == 'POST':
-#         post_data = request.data
-#         post_data["author_id"] = author_id
-#         post = PostSerializer(data=post_data)
+    @swagger_auto_schema(
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties=SwaggerShape.post_request_body
+        ),
+        responses={
+            "200": openapi.Response(
+                description="OK",
+            )
+        }
+    )
+    @authenticated
+    def post(request, author_id):
+        post_data = request.data
+        post_data["author_id"] = author_id
+        post = PostSerializer(data=post_data)
 
-#         if not post.is_valid():
-#             return Response(data=post.errors, status=status.HTTP_400_BAD_REQUEST)
+        if not post.is_valid():
+            return Response(data=post.errors, status=status.HTTP_400_BAD_REQUEST)
 
-#         post.save()
+        post.save()
 
-#         return Response(data=post.data)
-
-#     elif request.method == 'GET':
-#         try:
-#             page = int(request.GET.get('page', 1))
-#             size = int(request.GET.get('size', 5))
-
-#             author = Author.objects.get(id=author_id)
-#             offset = (page - 1) * size
-#             posts = Post.objects.filter(author_id=author_id)[
-#                 offset:offset+size]
-#             serialized_posts = PostSerializer(posts, many=True)
-#             return Response(data=serialized_posts.data)
-#         except Author.DoesNotExist:
-#             return Response(data=f"Author with id: {author_id} does not exist", status=status.HTTP_404_NOT_FOUND)
-
-
-# @swagger_auto_schema(method='put', operation_description="Create a post with a given id", request_body=PostSerializer, responses={200: PostSerializer})
-# @swagger_auto_schema(method='get', operation_description="Get a post by id", responses={200: PostSerializer})
-# @swagger_auto_schema(method='delete', operation_description="Delete a post")
-# @swagger_auto_schema(method='post', operation_description="Update a post", request_body=PostSerializer, responses={200: PostSerializer})
-# @api_view(['POST', 'GET', 'DELETE', 'PUT'])
-# def post(request, author_id, post_id):
-#     token = request.COOKIES.get('access')
-#     payload = None
-#     try:
-#         payload = decode_token(token)
-#     except (UnauthenticatedError, InvalidTokenError, ExpiredTokenError) as err:
-#         return Response(data=str(err), status=status.HTTP_401_UNAUTHORIZED)
-
-#     # TODO: permission check
-
-#     if request.method == 'PUT':
-#         post_data = request.data
-#         post_data["id"] = post_id
-#         post_data["author_id"] = author_id
-#         post = PostSerializer(data=post_data)
-
-#         if not post.is_valid():
-#             return Response(data=post.errors, status=status.HTTP_400_BAD_REQUEST)
-
-#         post.save()
-
-#         return Response(data=post.data)
-
-#     elif request.method == 'GET':
-#         try:
-#             author = Author.objects.get(id=author_id)
-#             post = Post.objects.get(id=post_id)
-#             if post.visibility == Post.Visibility.FRIENDS:
-#                 # ! note: this might change depending if we store foreign authors from friend requests
-#                 followers_of_author = Follower.objects.filter(
-#                     author=post.author.id, follower="864decb1-ed95-4c85-b189-2e5216844853")
-#                 # print(followers_of_author)
-#                 if len(followers_of_author) == 0:
-#                     return Response(data="You don't have permission to view this post", status=status.HTTP_401_UNAUTHORIZED)
-#             serialized_post = PostSerializer(post)
-
-#             return Response(data=serialized_post.data)
-#         except Post.DoesNotExist as e:
-#             return Response(data="Post does not exist", status=status.HTTP_404_NOT_FOUND)
-#         except Author.DoesNotExist as e:
-#             return Response(data="Author does not exist", status=status.HTTP_404_NOT_FOUND)
-#         except Follower.DoesNotExist as e:
-#             return Response(data="bruh", status=status.HTTP_404_NOT_FOUND)
-
-#     elif request.method == 'POST':
-#         try:
-#             post = Post.objects.get(id=post_id)
-#             post_data = request.data
-#             post_data["id"] = post_id
-#             updated_post = PostSerializer(
-#                 instance=post, data=post_data, partial=True)
-
-#             if not updated_post.is_valid():
-#                 return Response(data=updated_post.errors, status=status.HTTP_400_BAD_REQUEST)
-
-#             updated_post.save()
-
-#             return Response(data=updated_post.data)
-#         except Post.DoesNotExist as e:
-#             return Response(data=e, status=status.HTTP_404_NOT_FOUND)
-
-#     elif request.method == 'DELETE':
-#         affected_rows = Post.objects.filter(id=post_id).delete()
-#         if affected_rows[0] == 0:
-#             return Response(data=f"could not delete post with id \'{post_id}\'", status=status.HTTP_404_NOT_FOUND)
-#         return Response(data=affected_rows[0])
+        return Response(data=post.data)
 
 
-# @swagger_auto_schema(method='post', operation_description="Comment on a post", request_body=CommentSerializer, responses={200: CommentSerializer})
-# @swagger_auto_schema(method='get', operation_description="Get a comment", responses={200: CommentSerializer(many=True)})
-# @api_view(['POST', 'GET'])
-# def comments(request, author_id, post_id):
-#     token = request.COOKIES.get('access')
-#     payload = None
-#     try:
-#         payload = decode_token(token)
-#     except (UnauthenticatedError, InvalidTokenError, ExpiredTokenError) as err:
-#         return Response(data=str(err), status=status.HTTP_401_UNAUTHORIZED)
+class PostView(APIView):
 
-#     # TODO: permission check
+    @swagger_auto_schema(
+        responses={
+            "200": openapi.Response(
+                description="OK",
+                examples={
+                    "application/json":
+                    SwaggerShape.post_detail
+                }
+            )
+        }
+    )
+    def get(self, request, author_id, post_id):
+        try:
+            # TODO: WHY AUTHOR NOT BEING USED?
+            author = Author.objects.get(id=author_id)
+            post = Post.objects.get(id=post_id)
+            if post.visibility == Post.Visibility.FRIENDS:
+                # ! note: this might change depending if we store foreign authors from friend requests
+                followers_of_author = Follower.objects.filter(
+                    author=post.author.id, follower="864decb1-ed95-4c85-b189-2e5216844853")
+                # print(followers_of_author)
+                if len(followers_of_author) == 0:
+                    return Response(data="You don't have permission to view this post", status=status.HTTP_401_UNAUTHORIZED)
+            serialized_post = PostSerializer(post)
 
-#     if request.method == 'GET':
-#         try:
-#             page = int(request.GET.get('page', 1))
-#             size = int(request.GET.get('size', 5))
+            return Response(data=serialized_post.data)
+        except Post.DoesNotExist as e:
+            return Response(data="Post does not exist", status=status.HTTP_404_NOT_FOUND)
+        except Author.DoesNotExist as e:
+            return Response(data="Author does not exist", status=status.HTTP_404_NOT_FOUND)
+        except Follower.DoesNotExist as e:
+            return Response(data="bruh", status=status.HTTP_404_NOT_FOUND)
 
-#             author = Author.objects.get(id=author_id)
-#             post = Post.objects.get(id=post_id)
+    @swagger_auto_schema(
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties=SwaggerShape.post_request_body
+        ),
+        responses={
+            "200": openapi.Response(
+                description="OK",
+            )
+        }
+    )
+    @authenticated
+    def post(self, request, author_id, post_id, format=None):
+        try:
+            post = Post.objects.get(id=post_id)
+            post_data = request.data
+            post_data["id"] = post_id
+            updated_post = PostSerializer(
+                instance=post, data=post_data, partial=True)
 
-#             offset = (page - 1) * size
-#             comments = Comment.objects.filter(post_id=post_id)[
-#                 offset:offset+size]
-#             serialized_comments = CommentSerializer(comments, many=True)
+            if not updated_post.is_valid():
+                return Response(data=updated_post.errors, status=status.HTTP_400_BAD_REQUEST)
 
-#             data = {
-#                 "type": "comments",
-#                 "page": page,
-#                 "size": size,
-#                 "post": f"{HOST}/authors/{author_id}/posts/{post_id}",
-#                 "id": f"{HOST}/authors/{author_id}/posts/{post_id}/comments",
-#                 "comments": serialized_comments.data
-#             }
+            updated_post.save()
 
-#             return Response(data=data)
+            return Response(data=updated_post.data)
+        except Post.DoesNotExist as e:
+            return Response(data=e, status=status.HTTP_404_NOT_FOUND)
 
-#         except Author.DoesNotExist:
-#             return Response(data=f"Author with id: {author_id} does not exist", status=status.HTTP_404_NOT_FOUND)
-#         except Post.DoesNotExist:
-#             return Response(data=f"Post with id: {post_id} does not exist", status=status.HTTP_404_NOT_FOUND)
+    def delete(self, request, author_id, post_id, format=None):
+        affected_rows = Post.objects.filter(id=post_id).delete()
+        if affected_rows[0] == 0:
+            return Response(data=f"could not delete post with id \'{post_id}\'", status=status.HTTP_404_NOT_FOUND)
+        return Response(data=affected_rows[0])
 
-#     if request.method == 'POST':
-#         comment_data = request.data
-#         comment_data["post_id"] = post_id
-#         comment_data["author_id"] = author_id
-#         comment = CommentSerializer(data=comment_data)
+    def put(self, request, author_id, post_id, format=None):
+        post_data = request.data
+        post_data["id"] = post_id
+        post_data["author_id"] = author_id
+        post = PostSerializer(data=post_data)
 
-#         if not comment.is_valid():
-#             return Response(data=comment.errors, status=status.HTTP_400_BAD_REQUEST)
+        if not post.is_valid():
+            return Response(data=post.errors, status=status.HTTP_400_BAD_REQUEST)
 
-#         comment.save()
+        post.save()
 
-#         return Response(data=comment.data)
+        return Response(data=post.data)
+
+
+class PostImageView(APIView):
+    @swagger_auto_schema(
+        responses={
+            "200": openapi.Response(
+                description="OK",
+                examples={
+                    "application/json": SwaggerShape.post_detail_img
+                }
+            )
+        }
+    )
+    def get(self, request, author_id, post_id):
+
+        post = Post.objects.filter(id=post_id, author=author_id).first()
+
+        if post is None:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+
+        if not post.contentType in [Post.ContentType.jpegImg, Post.ContentType.pngImg]:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+
+        return Response(data=base64.b64decode(post.content),
+                        content_type=post.contentType.split(";")[0])
+
+
+class CommentsView(APIView):
+    @swagger_auto_schema(
+        responses={
+            "200": openapi.Response(
+                description="OK",
+                examples={
+                    "application/json":
+                    SwaggerShape.comment_list
+                }
+            )
+        }
+    )
+    def get(self, request, author_id, post_id):
+        try:
+            page = int(request.GET.get('page', 1))
+            size = int(request.GET.get('size', 5))
+
+            offset = (page - 1) * size
+            comments = Comment.objects.filter(post_id=post_id)[
+                offset:offset+size]
+            serialized_comments = CommentSerializer(comments, many=True)
+
+            data = {
+                "type": "comments",
+                "page": page,
+                "size": size,
+                "post": f"{HOST}/authors/{author_id}/posts/{post_id}",
+                "id": f"{HOST}/authors/{author_id}/posts/{post_id}/comments",
+                "comments": serialized_comments.data
+            }
+
+            return Response(data=data)
+
+        except Author.DoesNotExist:
+            return Response(data=f"Author with id: {author_id} does not exist", status=status.HTTP_404_NOT_FOUND)
+        except Post.DoesNotExist:
+            return Response(data=f"Post with id: {post_id} does not exist", status=status.HTTP_404_NOT_FOUND)
+
+    @swagger_auto_schema(
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties=SwaggerShape.comment_request_body
+        ),
+        responses={
+            "200": openapi.Response(
+                description="OK",
+            )
+        }
+    )
+    @authenticated
+    def post(self, request, author_id, post_id):
+        comment_data = request.data
+        comment_data["post_id"] = post_id
+        comment_data["author_id"] = author_id
+        comment = CommentSerializer(data=comment_data)
+
+        if not comment.is_valid():
+            return Response(data=comment.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        comment.save()
+
+        return Response(data=comment.data)
 
 
 # @swagger_auto_schema(method='post', operation_description="Send an object to inbox, see https://github.com/abramhindle/CMPUT404-project-socialdistribution/blob/master/project.org#inbox")
@@ -493,65 +548,85 @@ class AuthorsView(APIView):
 
 # @swagger_auto_schema(method='get', operation_description="Get a list of followers of an author", responses={200: AuthorSerializer(many=True)})
 # @api_view(['GET'])
-# def followers(request, author_id):
-#     if request.method == 'GET':
-#         try:
-#             followers = Follower.objects.filter(author=author_id)
-#             serialized_followers = FollowerSerializer(followers, many=True)
-#             authors = Author.objects.filter(
-#                 id__in=[x.get('follower') for x in serialized_followers.data])
-#             serialized_authors = AuthorSerializer(authors, many=True)
 
-#             return Response(data={
-#                 "type": "followers",
-#                 "items": serialized_authors.data
-#             })
+class FollowersView(APIView):
+    @swagger_auto_schema(
+        responses={
+            "200": openapi.Response(
+                description="OK",
+                examples={
+                    "application/json":
+                    SwaggerShape.follower_list
+                }
+            )
+        }
+    )
+    def get(self, request, author_id):
+        try:
+            followers = Follower.objects.filter(author=author_id)
+            serialized_followers = FollowerSerializer(followers, many=True)
+            authors = Author.objects.filter(
+                id__in=[x.get('follower') for x in serialized_followers.data])
+            serialized_authors = AuthorSerializer(authors, many=True)
 
-#         except Author.DoesNotExist:
-#             return Response(data=f"Author with id: {author_id} does not exist", status=status.HTTP_404_NOT_FOUND)
-#         except:
-#             return Response(status=status.HTTP_404_NOT_FOUND)
+            return Response(data={
+                "type": "followers",
+                "items": serialized_authors.data
+            })
+
+        except Author.DoesNotExist:
+            return Response(data=f"Author with id: {author_id} does not exist", status=status.HTTP_404_NOT_FOUND)
+        except:
+            return Response(status=status.HTTP_404_NOT_FOUND)
 
 
-# @swagger_auto_schema(method='get', operation_description="See if foreign_author_id follows author_id")
-# @swagger_auto_schema(method='delete', operation_description="foreign_author_id unfollows author_id")
-# @swagger_auto_schema(method='put', operation_description="adds foreign_author_id as a follower of author_id")
-# @api_view(['GET', 'DELETE', 'PUT'])
-# def author_followers(request, author_id, foreign_author_id):
-#     token = request.COOKIES.get('access')
-#     payload = None
-#     try:
-#         payload = decode_token(token)
-#     except (UnauthenticatedError, InvalidTokenError, ExpiredTokenError) as err:
-#         return Response(data=str(err), status=status.HTTP_401_UNAUTHORIZED)
+class FollowerView(APIView):
+    @swagger_auto_schema(
+        responses={
+            "200": openapi.Response(
+                description="OK",
+                examples={
+                    "application/json":
+                    SwaggerShape.author_details
+                }
+            )
+        }
+    )
+    def get(self, request, author_id, foreign_author_id):
+        try:
+            following = Follower.objects.filter(
+                author=author_id, follower=foreign_author_id).first()
 
-#     if request.method == 'GET':
-#         try:
-#             following = Follower.objects.filter(
-#                 author=author_id, follower=foreign_author_id).first()
+        # TODO: IDK IF ACTUAL RESPONSE - JUST SENDING 404
+            if (following is None):
+                return Response(data=f"Author with id: {foreign_author_id} is not following author: {author_id}", status=status.HTTP_404_NOT_FOUND)
 
-#         # TODO: IDK IF ACTUAL RESPONSE - JUST SENDING 404
-#             if (following is None):
-#                 return Response(data=f"Author with id: {foreign_author_id} is not following author: {author_id}", status=status.HTTP_404_NOT_FOUND)
+        # TODO: IDK IF ACTUAL RESPONSE - JUST SENDING 200
+            return Response(status=status.HTTP_200_OK)
 
-#         # TODO: IDK IF ACTUAL RESPONSE - JUST SENDING 200
-#             return Response(status=status.HTTP_200_OK)
+        except:
+            return Response(data="Error", status=status.HTTP_404_NOT_FOUND)
 
-#         except:
-#             return Response(data="Error", status=status.HTTP_404_NOT_FOUND)
+    @authenticated
+    def delete(self, request, author_id, foreign_author_id):
+        Follower.objects.filter(
+            author=author_id, follower=foreign_author_id).delete()
+        return Response(f"Cleared following of author: {foreign_author_id} for author: {author_id}", status=status.HTTP_200_OK)
 
-#     if request.method == 'DELETE':
-#         Follower.objects.filter(
-#             author=author_id, follower=foreign_author_id).delete()
-#         return Response(f"Cleared following of author: {foreign_author_id} for author: {author_id}", status=status.HTTP_200_OK)
+    @swagger_auto_schema(
+        responses={
+            "200": openapi.Response(
+                description="OK",
+            )
+        }
+    )
+    @authenticated
+    def put(self, request, author_id, foreign_author_id):
+        follow_request = FollowerSerializer(
+            data={"author": author_id, "follower": foreign_author_id})
 
-#     # TODO This method needs to be authenticated
-#     if request.method == 'PUT':
-#         follow_request = FollowerSerializer(
-#             data={"author": author_id, "follower": foreign_author_id})
+        if not follow_request.is_valid():
+            return Response(data=follow_request.errors, status=status.HTTP_400_BAD_REQUEST)
 
-#         if not follow_request.is_valid():
-#             return Response(data=follow_request.errors, status=status.HTTP_400_BAD_REQUEST)
-
-#         follow_request.save()
-#         return Response(follow_request.data, status=status.HTTP_200_OK)
+        follow_request.save()
+        return Response(follow_request.data, status=status.HTTP_200_OK)
