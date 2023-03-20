@@ -83,6 +83,10 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'epicapp.wsgi.application'
 
+SWAGGER_SETTINGS = {
+    'USE_SESSION_AUTH': False
+}
+
 
 # Database
 # https://docs.djangoproject.com/en/4.1/ref/settings/#databases
