@@ -3,36 +3,37 @@ from . import views
 
 urlpatterns = [
     # auth
-    path('auth/register/', views.register, name='register'),
-    path('auth/authenticate/', views.authenticate, name='authenticate'),
-    path('auth/logout/', views.logout, name='logout'),
+    path('auth/register/', views.RegisterView.as_view(), name='register'),
+    path('auth/authenticate/', views.AuthenticateView.as_view(), name='authenticate'),
+    path('auth/logout/', views.LogoutView.as_view(), name='logout'),
 
     # authors
-    path('author/details/', views.get_author_details, name='get_author_details'), # get currently authenticated author
-    path('author/<str:id>', views.get_author, name='get_author'),
-    path('authors', views.get_authors, name='get_authors'),
+    path('authors/<str:id>/', views.AuthorView.as_view(), name='get_author'),
+    path('authors/', views.AuthorsView.as_view(), name='get_authors'),
 
     # posts
-    path('authors/<str:author_id>/posts', views.posts, name='posts_endpoint'),
-    path('authors/<str:author_id>/posts/<str:post_id>', views.post, name='post_endpoint'),
+    path('authors/<str:author_id>/posts/',
+         views.PostsView.as_view(), name='posts_endpoint'),
+    path('authors/<str:author_id>/posts/<str:post_id>/',
+         views.PostView.as_view(), name='post_endpoint'),
+    path('authors/<str:author_id>/posts/<str:post_id>/image/',
+         views.PostImageView.as_view(), name='post_image_endpoint'),
     path('authors/<str:author_id>/posts/<str:post_id>/comments',
-         views.comments, name="post endpoint"),
+         views.CommentsView.as_view(), name="comments endpoint"),
     path('authors/<str:author_id>/posts/<str:post_id>/likes',
-         views.post_likes, name="post likes endpoint"),
+         views.LikesView.as_view(), name="post likes endpoint"),
     path('authors/<str:author_id>/posts/<str:post_id>/comments/<str:comment_id>/likes',
-         views.comment_likes, name="comments likes endpoint"),
-
-    # likes
-    path('authors/<str:id>/liked', views.liked,
+         views.CommentLikesView.as_view(), name="comments likes endpoint"),
+    path('authors/<str:id>/liked', views.LikedView.as_view(),
          name="liked items (comments and posts)"),
 
     # inbox
-    path('authors/<str:id>/inbox', views.inbox, name='inbox'),
+    path('authors/<str:id>/inbox', views.InboxView.as_view(), name='inbox'),
 
     # followers
     path('authors/<str:author_id>/followers/',
-         views.followers, name="get followers endpoint"),
+         views.FollowersView.as_view(), name="get followers endpoint"),
     path('authors/<str:author_id>/followers/<path:foreign_author_id>',
-         views.author_followers, name="following endpoint"),
+         views.FollowerView.as_view(), name="following endpoint"),
 
 ]
