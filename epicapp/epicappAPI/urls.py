@@ -8,6 +8,7 @@ urlpatterns = [
     path('auth/logout/', views.LogoutView.as_view(), name='logout'),
 
     # authors
+    path('authors/details/', views.AuthorDetails.as_view(), name='get_author_local'),
     path('authors/<str:id>/', views.AuthorView.as_view(), name='get_author'),
     path('authors/', views.AuthorsView.as_view(), name='get_authors'),
 
@@ -20,7 +21,7 @@ urlpatterns = [
          views.PostImageView.as_view(), name='post_image_endpoint'),
     path('authors/<str:author_id>/posts/<str:post_id>/comments',
          views.CommentsView.as_view(), name="comments endpoint"),
-    path('authors/<str:author_id>/posts/<str:post_id>/likes',
+    path('authors/<str:author_id>/posts/<str:post_id>/likes/',
          views.LikesView.as_view(), name="post likes endpoint"),
     path('authors/<str:author_id>/posts/<str:post_id>/comments/<str:comment_id>/likes',
          views.CommentLikesView.as_view(), name="comments likes endpoint"),

@@ -22,11 +22,11 @@ def authenticated(func):
                 token = arg.COOKIES.get('access')
                 try:
                     if token:
-                        decode_token(token)
+                        arg._auth = decode_token(token)
                         return func(*args, **kwargs)
                     else:
                         return HttpResponseBadRequest(status=401)
                 except (UnauthenticatedError, InvalidTokenError, ExpiredTokenError) as err:
                     return HttpResponseBadRequest(status=401)
-            return HttpResponseBadRequest(status=599)
+        return HttpResponseBadRequest(status=599)
     return wrapper
