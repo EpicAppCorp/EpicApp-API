@@ -88,7 +88,7 @@ class AuthenticateView(APIView):
         response = Response(data=AuthorSerializer(author).data,
                             status=status.HTTP_200_OK)
         response.set_cookie(key='access', value=token,
-                            secure=False, samesite='Strict')
+                            secure=True, httponly=True)
         return response
 
 
