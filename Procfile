@@ -1,1 +1,1 @@
-web: gunicorn --chdir ./epicapp/epicapp.wsgi
+web: gunicorn --chdir ./epicapp epicapp.wsgi
