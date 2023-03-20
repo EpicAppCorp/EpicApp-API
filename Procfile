@@ -1,1 +1,1 @@
-web: gunicorn epicapp.wsgi.applicatio
+web: gunicorn epicapp.wsgi.application
