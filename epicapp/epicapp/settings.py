@@ -10,7 +10,9 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.1/ref/settings/
 """
 
+import os
 from pathlib import Path
+import django_on_heroku
 
 import environ
 env = environ.Env()
@@ -19,7 +21,6 @@ environ.Env.read_env()
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.1/howto/deployment/checklist/
 
@@ -27,11 +28,13 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-v=g&ya+!wr+f*vvt7awvvs^7^#mc0+)v7v4l7h$rs0x^^dl_i)'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [
+    '*'
+]
 
-
+APPEND_SLASH = True
 # Application definition
 
 INSTALLED_APPS = [
@@ -78,6 +81,10 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'epicapp.wsgi.application'
+
+SWAGGER_SETTINGS = {
+    'USE_SESSION_AUTH': False
+}
 
 
 # Database
@@ -140,3 +147,4 @@ AUTH_USER_MODEL = 'epicappAPI.Author'
 
 CORS_ORIGIN_ALLOW_ALL = True
 CORS_ALLOW_CREDENTIALS = True
+django_on_heroku.settings(locals())

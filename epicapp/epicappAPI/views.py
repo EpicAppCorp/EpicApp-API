@@ -88,7 +88,11 @@ class AuthenticateView(APIView):
         response = Response(data=AuthorSerializer(author).data,
                             status=status.HTTP_200_OK)
         response.set_cookie(key='access', value=token,
-                            secure=False, samesite='Strict')
+                            secure=True, httponly=True, samesite='None')
+
+        # this one is for dev
+        # response.set_cookie(key='access', value=token,
+        #                     secure=False, samesite='Strict')
         return response
 
 
@@ -107,6 +111,24 @@ class LogoutView(APIView):
         return response
 
 
+class AuthorDetails(APIView):
+    @swagger_auto_schema(
+        responses={
+            "200": openapi.Response(
+                description="OK",
+                examples={
+                    "application/json":
+                    SwaggerShape.author_details
+                }
+            )
+        }
+    )
+    @authenticated
+    def get(self, request, format=None):
+        author = Author.objects.filter(id=request._auth['id']).first()
+        return Response(data=AuthorSerializer(author).data, status=status.HTTP_200_OK)
+
+
 class AuthorView(APIView):
     @swagger_auto_schema(
         responses={
@@ -119,7 +141,7 @@ class AuthorView(APIView):
             )
         }
     )
-    def get(self, id, format=None):
+    def get(self, request, id, format=None):
         author = Author.objects.filter(id=id).first()
         return Response(data=AuthorSerializer(author).data, status=status.HTTP_200_OK)
 
@@ -516,7 +538,7 @@ class LikesView(APIView):
             )
         }
     )
-    def get(request, author_id, post_id):
+    def get(self, request, author_id, post_id):
         post_likes = PostLike.objects.filter(post_id=post_id)
         serialized_post_like = PostLikeSerializer(post_likes, many=True)
         return Response(data=serialized_post_like.data)
@@ -534,7 +556,7 @@ class CommentLikesView(APIView):
             )
         }
     )
-    def get(request, author_id, post_id, comment_id):
+    def get(self, request, author_id, post_id, comment_id):
         comment_likes = CommentLike.objects.filter(comment_id=comment_id)
         serialized_comment_like = CommentLikeSerializer(
             comment_likes, many=True)
@@ -553,7 +575,7 @@ class LikedView(APIView):
             )
         }
     )
-    def get(request, id):
+    def get(self, request, id):
         liked_comments = CommentLike.objects.filter(author_id=id)
         liked_posts = PostLike.objects.filter(author_id=id)
 
