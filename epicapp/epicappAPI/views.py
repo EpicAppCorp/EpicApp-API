@@ -166,7 +166,7 @@ class AuthorsView(APIView):
         authors = Author.objects.all()[
             offset:offset+size]
         serialized_authors = AuthorSerializer(authors, many=True)
-        return Response(data=serialized_authors.data)
+        return Response(data={"type": "authors", "items": serialized_authors.data})
 
 
 class PostsView(APIView):
