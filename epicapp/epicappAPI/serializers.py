@@ -8,12 +8,12 @@ from .config import HOST
 
 
 class AuthorSerializer(serializers.ModelSerializer):
-    profile_image = serializers.CharField(required=False)
+    profileImage = serializers.CharField(required=False)
 
     class Meta:
         model = Author
         fields = ['type', 'id', 'host', 'displayName',
-                  'url', 'github', 'profile_image', 'password']
+                  'url', 'github', 'profileImage', 'password']
         extra_kwargs = {'password': {'write_only': True}}
 
     def create(self, validated_data):
@@ -22,7 +22,7 @@ class AuthorSerializer(serializers.ModelSerializer):
         validated_data['url'] = f"{HOST}/api/authors/{id}"
         validated_data['host'] = f"{HOST}/"
         validated_data[
-            'profile_image'] = f"https://api.dicebear.com/5.x/micah/svg?backgroundColor=fffd01&seed={id}"
+            'profileImage'] = f"https://api.dicebear.com/5.x/micah/svg?backgroundColor=fffd01&seed={id}"
         # hash password
         validated_data['password'] = make_password(validated_data['password'])
         return Author.objects.create(**validated_data)
@@ -32,8 +32,8 @@ class AuthorSerializer(serializers.ModelSerializer):
             'displayName', instance.displayName)
         instance.host = validated_data.get('host', instance.host)
         instance.github = validated_data.get('github', instance.github)
-        instance.profile_image = validated_data.get(
-            'profile_image', instance.profile_image)
+        instance.profileImage = validated_data.get(
+            'profileImage', instance.profileImage)
         instance.save()
         return instance
 
