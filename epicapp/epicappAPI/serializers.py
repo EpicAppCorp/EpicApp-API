@@ -19,7 +19,7 @@ class AuthorSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         id = uuid.uuid4()
         validated_data['id'] = id
-        validated_data['url'] = f"{HOST}/authors/{id}"
+        validated_data['url'] = f"{HOST}/api/authors/{id}"
         validated_data['host'] = f"{HOST}/"
         validated_data[
             'profile_image'] = f"https://api.dicebear.com/5.x/micah/svg?backgroundColor=fffd01&seed={id}"
