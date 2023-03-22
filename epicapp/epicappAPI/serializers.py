@@ -27,6 +27,11 @@ class AuthorSerializer(serializers.ModelSerializer):
         validated_data['password'] = make_password(validated_data['password'])
         return Author.objects.create(**validated_data)
 
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        representation['id'] = f"{HOST}/api/authors/{instance.id}"
+        return representation
+
     def update(self, instance, validated_data):
         instance.displayName = validated_data.get(
             'displayName', instance.displayName)
