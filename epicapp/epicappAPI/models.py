@@ -40,6 +40,7 @@ class Post(models.Model):
     class Visibility(models.TextChoices):
         PUBLIC = 'PUBLIC'
         FRIENDS = 'FRIENDS'
+        # TODO: PRIVATE
 
     type = "post"
     id = models.CharField(
@@ -87,11 +88,16 @@ class CommentLike(models.Model):
 
 
 class Inbox(models.Model):
+    class ObjectType(models.TextChoices):
+        like = 'like'
+        comment = 'comment'
+        post = 'post'
+        follower = 'follow'
+
     author = models.ForeignKey(Author, on_delete=models.CASCADE)
-    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
-    object_id = models.UUIDField()
-    content_object = GenericForeignKey('content_type', 'object_id')
+    object_id = models.CharField(max_length=255)
     created_at = models.DateTimeField(auto_now_add=True)
+    object_type = models.CharField(max_length=7, choices=ObjectType.choices)
 
     class Meta:
         ordering = ('created_at', )
@@ -102,8 +108,7 @@ class Follower(models.Model):
                           default=uuid.uuid4, editable=False)
     author = models.CharField(max_length=255,
                               default=uuid.uuid4, editable=False)
-    follower = models.CharField(max_length=255,
-                                default=uuid.uuid4, editable=False)
+    follower = models.URLField(blank=False, editable=False)
 
     class Meta:
         unique_together = (('author', 'follower'))
@@ -111,7 +116,9 @@ class Follower(models.Model):
 
 class FollowRequest(models.Model):
     type = "Follow"
-    actor = models.ForeignKey(
-        Author, on_delete=models.CASCADE,  related_name='follower')
-    object = models.ForeignKey(
-        Author, on_delete=models.CASCADE,  related_name='followee')
+    id = models.CharField(primary_key=True, max_length=255,
+                          default=uuid.uuid4, editable=False)
+    # the author who is being followed
+    object = models.ForeignKey(Author, on_delete=models.CASCADE)
+    # author who made follow request
+    actor = models.URLField(blank=False, editable=False)

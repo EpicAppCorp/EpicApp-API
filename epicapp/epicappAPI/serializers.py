@@ -37,6 +37,11 @@ class AuthorSerializer(serializers.ModelSerializer):
         instance.save()
         return instance
 
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        representation['id'] = f"{HOST}/api/authors/{instance.id}"
+        return representation
+
 
 class PostSerializer(serializers.ModelSerializer):
     type = serializers.ReadOnlyField()
@@ -148,26 +153,14 @@ class CommentLikeSerializer(serializers.ModelSerializer):
 
 
 class InboxSerializer(serializers.ModelSerializer):
+    author_id = serializers.CharField(write_only=True)
+
     class Meta:
         model = Inbox
-        fields = ['content_type', 'object_id', 'content_object']
+        fields = ['object_id', 'object_type', 'author_id']
 
-    def to_representation(self, instance):
-        value = instance.content_object
-        if isinstance(value, PostLike):
-            serializer = PostLikeSerializer(value)
-        elif isinstance(value, CommentLike):
-            serializer = CommentLikeSerializer(value)
-        elif isinstance(value, Post):
-            serializer = PostSerializer(value)
-        elif isinstance(value, Comment):
-            serializer = CommentSerializer(value)
-        elif isinstance(value, FollowRequest):
-            serializer = FollowRequestSerializer(value)
-
-        else:
-            raise Exception('Unexpected type of tagged object')
-        return serializer.data
+    def create(self, validated_data):
+        return Inbox.objects.create(**validated_data)
 
 
 class FollowerSerializer(serializers.ModelSerializer):
@@ -184,14 +177,13 @@ class FollowerSerializer(serializers.ModelSerializer):
 
 class FollowRequestSerializer(serializers.ModelSerializer):
     type = serializers.ReadOnlyField()
-    actor = AuthorSerializer(read_only=True)
+    object_id = serializers.CharField(write_only=True) 
     object = AuthorSerializer(read_only=True)
+    actor = serializers.URLField(required=True)
 
     class Meta:
         model = FollowRequest
-        fields = ['type', 'actor', 'object']
+        fields = ['id', 'type', 'actor', 'object', 'object_id']
 
-    def to_representation(self, instance):
-        representation = super().to_representation(instance)
-        representation["summary"] = f"{instance.actor.displayName} wants to follow {instance.object.displayName}"
-        return representation
+    def create(self, validated_data):
+        return FollowRequest.objects.create(**validated_data)
