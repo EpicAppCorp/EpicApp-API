@@ -174,7 +174,7 @@ class FollowRequestSerializer(serializers.ModelSerializer):
     type = serializers.ReadOnlyField()
     object_id = serializers.CharField(write_only=True)
     object = AuthorSerializer(read_only=True)
-    actor = serializers.URLField(required=True)
+    actor = serializers.CharField(required=True)
 
     class Meta:
         model = FollowRequest
