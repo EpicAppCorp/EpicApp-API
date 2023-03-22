@@ -96,7 +96,7 @@ class AuthenticateView(APIView):
         response = Response(data={**serialized_author, "followers": followers, "following": following},
                             status=status.HTTP_200_OK)
         response.set_cookie(key='access', value=token,
-                            secure=True, httponly=True, samesite='None')
+                            secure=True, httponly=True, samesite='Lax')
 
         # this one is for dev
         # response.set_cookie(key='access', value=token,
