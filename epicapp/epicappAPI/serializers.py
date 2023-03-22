@@ -22,7 +22,7 @@ class AuthorSerializer(serializers.ModelSerializer):
         validated_data['url'] = f"{HOST}/api/authors/{id}"
         validated_data['host'] = f"{HOST}/"
         validated_data[
-            'profileImage'] = f"https://api.dicebear.com/5.x/micah/svg?backgroundColor=fffd01&seed={id}"
+            'profileImage'] = f"https://api.dicebear.com/5.x/micah/svg?backgroundColor=b6e3f4,c0aede,ffd5dc,fffd01&seed={id}"
         # hash password
         validated_data['password'] = make_password(validated_data['password'])
         return Author.objects.create(**validated_data)
@@ -36,11 +36,6 @@ class AuthorSerializer(serializers.ModelSerializer):
             'profileImage', instance.profileImage)
         instance.save()
         return instance
-
-    def to_representation(self, instance):
-        representation = super().to_representation(instance)
-        representation['id'] = f"{HOST}/api/authors/{instance.id}"
-        return representation
 
 
 class PostSerializer(serializers.ModelSerializer):
@@ -177,7 +172,7 @@ class FollowerSerializer(serializers.ModelSerializer):
 
 class FollowRequestSerializer(serializers.ModelSerializer):
     type = serializers.ReadOnlyField()
-    object_id = serializers.CharField(write_only=True) 
+    object_id = serializers.CharField(write_only=True)
     object = AuthorSerializer(read_only=True)
     actor = serializers.URLField(required=True)
 

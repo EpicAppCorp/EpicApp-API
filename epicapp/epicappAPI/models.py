@@ -108,7 +108,7 @@ class Follower(models.Model):
                           default=uuid.uuid4, editable=False)
     author = models.CharField(max_length=255,
                               default=uuid.uuid4, editable=False)
-    follower = models.URLField(blank=False, editable=False)
+    follower = models.TextField()
 
     class Meta:
         unique_together = (('author', 'follower'))

@@ -13,8 +13,7 @@ from drf_yasg import openapi
 
 from .models import Author, Post, Comment, PostLike, CommentLike, Inbox, Follower, FollowRequest
 from .config import HOST
-from .utils.auth import decode_token, authenticated
-from .exceptions import UnauthenticatedError, InvalidTokenError, ExpiredTokenError
+from .utils.auth import authenticated
 from .serializers import AuthorSerializer, PostSerializer, CommentSerializer, PostLikeSerializer, CommentLikeSerializer, InboxSerializer, FollowerSerializer, FollowRequestSerializer
 
 
@@ -85,8 +84,16 @@ class AuthenticateView(APIView):
                 'iat': datetime.datetime.utcnow()
             }, "SECRET_NOT_USING_ENV_CAUSE_WHO_CARES", algorithm='HS256')
 
+        serialized_author = AuthorSerializer(author).data
+
+        # gets followers on login
+        followers = Follower.objects.filter(
+            author=serialized_author['id']).count()
+        following = Follower.objects.filter(
+            follower=f"{HOST}/api/authors/{serialized_author['id']}").count()
+
         # return an http only cookie, but if needed to make it easier, we can not do http only cookies so JS can use it.
-        response = Response(data=AuthorSerializer(author).data,
+        response = Response(data={**serialized_author, "followers": followers, "following": following},
                             status=status.HTTP_200_OK)
         response.set_cookie(key='access', value=token,
                             secure=True, httponly=True, samesite='None')
@@ -126,8 +133,11 @@ class AuthorDetails(APIView):
     )
     @authenticated
     def get(self, request, format=None):
+        followers = Follower.objects.filter(author=request._auth['id']).count()
+        following = Follower.objects.filter(
+            follower=f"{HOST}/api/authors/{request._auth['id']}").count()
         author = Author.objects.filter(id=request._auth['id']).first()
-        return Response(data=AuthorSerializer(author).data, status=status.HTTP_200_OK)
+        return Response(data={**AuthorSerializer(author).data, "followers": followers, "following": following}, status=status.HTTP_200_OK)
 
 
 class AuthorView(APIView):
@@ -217,10 +227,11 @@ class PostsView(APIView):
 
         post.save()
 
-        for follower_url in Follower.objects.filter(author=author_id):
-            follower_inbox_url = f"{follower_url}/inbox"
+        for follower_url in Follower.objects.filter(author=author_id).values_list("follower", flat=True):
+            # TODO: PROPER BASIC AUTH FROM SERVER
             # fire and forget, if it doesn't make it to the follower oh well ¯\_(ツ)_/¯
-            requests.post(post_data)
+            requests.post(f"{follower_url}/inbox", json=post.data,
+                          headers={"Authorization": "Basic test"})
 
         return Response(data=post.data)
 
@@ -306,10 +317,11 @@ class PostView(APIView):
 
         post.save()
 
-        for follower_url in Follower.objects.filter(author=author_id):
-            follower_inbox_url = f"{follower_url}/inbox"
+        for follower_url in Follower.objects.filter(author=author_id).values_list("follower", flat=True):
+            # TODO: PROPER BASIC AUTH FROM SERVER
             # fire and forget, if it doesn't make it to the follower oh well ¯\_(ツ)_/¯
-            requests.post(post_data)
+            requests.post(f"{follower_url}/inbox", json=post.data,
+                          headers={"Authorization": "Basic test"})
 
         return Response(data=post.data)
 
@@ -427,7 +439,8 @@ class InboxView(APIView):
 
             elif inbox_item.object_type == 'follow':
                 try:
-                    follow_request = FollowRequest.objects.get(id=inbox_item.object_id)
+                    follow_request = FollowRequest.objects.get(
+                        id=inbox_item.object_id)
                     serialized_author = AuthorSerializer(follow_request.object)
 
                     res = requests.get(follow_request.actor)
@@ -441,7 +454,7 @@ class InboxView(APIView):
 
                 except FollowRequest.DoesNotExist:
                     return Response(data="something went wrong", status=status.HTTP_400_BAD_REQUEST)
-        
+
         data = {
             "type": "inbox",
             "author": f"{HOST}/authors/{id}",
@@ -460,7 +473,6 @@ class InboxView(APIView):
             )
         }
     )
-    @authenticated
     def post(self, request, id):
         data = request.data
         type = data["type"]
@@ -522,7 +534,7 @@ class InboxView(APIView):
             object_id = data["id"]
             inbox_item = InboxSerializer(data={
                 "author_id": id,
-                "object_id": object_id, 
+                "object_id": object_id,
                 "object_type": type
             })
 
@@ -572,7 +584,7 @@ class InboxView(APIView):
 
             inbox_item = InboxSerializer(data={
                 "author_id": id,
-                "object_id": follow_request.data['id'], 
+                "object_id": follow_request.data['id'],
                 "object_type": type
             })
 
@@ -582,8 +594,6 @@ class InboxView(APIView):
             inbox_item.save()
 
             return Response(data={}, status=status.HTTP_200_OK)
-
-
 
     @authenticated
     def delete(self, request, id):
