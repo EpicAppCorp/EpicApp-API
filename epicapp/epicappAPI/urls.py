@@ -6,9 +6,9 @@ urlpatterns = [
     path('auth/register/', views.RegisterView.as_view(), name='register'),
     path('auth/authenticate/', views.AuthenticateView.as_view(), name='authenticate'),
     path('auth/logout/', views.LogoutView.as_view(), name='logout'),
+    path('auth/details/', views.AuthorDetails.as_view(), name='get_author_local'),
 
     # authors
-    path('authors/details/', views.AuthorDetails.as_view(), name='get_author_local'),
     path('authors/<str:id>/', views.AuthorView.as_view(), name='get_author'),
     path('authors/', views.AuthorsView.as_view(), name='get_authors'),
 
