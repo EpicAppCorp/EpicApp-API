@@ -1,6 +1,7 @@
 import jwt
 import datetime
 import base64
+import requests
 
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -10,11 +11,11 @@ from .utils.swagger import SwaggerShape
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 
-from .models import Author, Post, Comment, PostLike, CommentLike, Inbox, Follower
+from .models import Author, Post, Comment, PostLike, CommentLike, Inbox, Follower, FollowRequest
 from .config import HOST
 from .utils.auth import decode_token, authenticated
 from .exceptions import UnauthenticatedError, InvalidTokenError, ExpiredTokenError
-from .serializers import AuthorSerializer, PostSerializer, CommentSerializer, PostLikeSerializer, CommentLikeSerializer, InboxSerializer, FollowerSerializer
+from .serializers import AuthorSerializer, PostSerializer, CommentSerializer, PostLikeSerializer, CommentLikeSerializer, InboxSerializer, FollowerSerializer, FollowRequestSerializer
 
 
 class RegisterView(APIView):
@@ -80,7 +81,7 @@ class AuthenticateView(APIView):
         token = jwt.encode(
             {
                 'id': AuthorSerializer(author).data['id'],
-                'exp': datetime.datetime.utcnow() + datetime.timedelta(minutes=60),
+                'exp': datetime.datetime.utcnow() + datetime.timedelta(days=365),
                 'iat': datetime.datetime.utcnow()
             }, "SECRET_NOT_USING_ENV_CAUSE_WHO_CARES", algorithm='HS256')
 
@@ -181,7 +182,7 @@ class PostsView(APIView):
             )
         }
     )
-    def get(request, author_id):
+    def get(self, request, author_id):
         try:
             page = int(request.GET.get('page', 1))
             size = int(request.GET.get('size', 5))
@@ -206,7 +207,7 @@ class PostsView(APIView):
         }
     )
     @authenticated
-    def post(request, author_id):
+    def post(self, request, author_id):
         post_data = request.data
         post_data["author_id"] = author_id
         post = PostSerializer(data=post_data)
@@ -215,6 +216,11 @@ class PostsView(APIView):
             return Response(data=post.errors, status=status.HTTP_400_BAD_REQUEST)
 
         post.save()
+
+        for follower_url in Follower.objects.filter(author=author_id):
+            follower_inbox_url = f"{follower_url}/inbox"
+            # fire and forget, if it doesn't make it to the follower oh well ¯\_(ツ)_/¯
+            requests.post(post_data)
 
         return Response(data=post.data)
 
@@ -299,6 +305,11 @@ class PostView(APIView):
             return Response(data=post.errors, status=status.HTTP_400_BAD_REQUEST)
 
         post.save()
+
+        for follower_url in Follower.objects.filter(author=author_id):
+            follower_inbox_url = f"{follower_url}/inbox"
+            # fire and forget, if it doesn't make it to the follower oh well ¯\_(ツ)_/¯
+            requests.post(post_data)
 
         return Response(data=post.data)
 
@@ -408,11 +419,33 @@ class InboxView(APIView):
     def get(self, request, id):
         inbox_items = Inbox.objects.filter(
             author_id=id).order_by('-created_at')
-        serialized_inbox_items = InboxSerializer(inbox_items, many=True)
+        data = []
+        for inbox_item in inbox_items:
+            if inbox_item.object_type == 'post':
+                res = requests.get(inbox_item.object_id)
+                data.append(res.json())
+
+            elif inbox_item.object_type == 'follow':
+                try:
+                    follow_request = FollowRequest.objects.get(id=inbox_item.object_id)
+                    serialized_author = AuthorSerializer(follow_request.object)
+
+                    res = requests.get(follow_request.actor)
+                    actor = res.json()
+                    data.append({
+                        "type": inbox_item.object_type,
+                        "summary": f"{actor['displayName']} wants to follow {serialized_author.data['displayName']}",
+                        "actor": actor,
+                        "object": serialized_author.data
+                    })
+
+                except FollowRequest.DoesNotExist:
+                    return Response(data="something went wrong", status=status.HTTP_400_BAD_REQUEST)
+        
         data = {
             "type": "inbox",
             "author": f"{HOST}/authors/{id}",
-            "items": serialized_inbox_items.data
+            "items": data
         }
         return Response(data)
 
@@ -432,7 +465,7 @@ class InboxView(APIView):
         data = request.data
         type = data["type"]
 
-        if type == "Like":
+        if type == "like":
             data['author_id'] = id
             url_components = data['object'].split('/')
             object_id = url_components[-1]
@@ -486,19 +519,19 @@ class InboxView(APIView):
                 return Response("Wtf you tryna do", status=status.HTTP_400_BAD_REQUEST)
 
         elif type == "post":
-            post_data = data
-            post_data["author_id"] = id
-            post = PostSerializer(data=post_data)
+            object_id = data["id"]
+            inbox_item = InboxSerializer(data={
+                "author_id": id,
+                "object_id": object_id, 
+                "object_type": type
+            })
 
-            if not post.is_valid():
-                return Response(data=post.errors, status=status.HTTP_400_BAD_REQUEST)
+            if not inbox_item.is_valid():
+                return Response(data=inbox_item.errors, status=status.HTTP_400_BAD_REQUEST)
 
-            post.save()
-
-            inbox_item = Inbox(content_object=post.instance, author_id=id)
             inbox_item.save()
 
-            return Response(data=post.data)
+            return Response(data={}, status=status.HTTP_200_OK)
 
         elif type == "comment":
             # TODO: find a better way to supply post id
@@ -515,10 +548,42 @@ class InboxView(APIView):
             inbox_item = Inbox(content_object=comment.instance, author_id=id)
             inbox_item.save()
 
-            return Response(data=comment.data)
+            return Response(data=post.data)
 
-        elif type == "Follow":
-            return Response("not implemented")
+        elif type == "follow":
+            new_follower = data['actor']['id']
+            author_id = data['object']['id'].split('/')[-1]
+            author = None
+
+            try:
+                author = Author.objects.get(id=author_id)
+            except Author.DoesNotExist:
+                return Response(data=f"Author with id: {author_id} does not exist", status=status.HTTP_404_NOT_FOUND)
+
+            follow_request = FollowRequestSerializer(data={
+                "actor": new_follower,
+                "object_id": author_id
+            })
+
+            if not follow_request.is_valid():
+                return Response(data=follow_request.errors, status=status.HTTP_400_BAD_REQUEST)
+
+            follow_request.save()
+
+            inbox_item = InboxSerializer(data={
+                "author_id": id,
+                "object_id": follow_request.data['id'], 
+                "object_type": type
+            })
+
+            if not inbox_item.is_valid():
+                return Response(data=inbox_item.errors, status=status.HTTP_400_BAD_REQUEST)
+
+            inbox_item.save()
+
+            return Response(data={}, status=status.HTTP_200_OK)
+
+
 
     @authenticated
     def delete(self, request, id):
