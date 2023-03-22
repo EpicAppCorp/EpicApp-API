@@ -454,12 +454,12 @@ class InboxView(APIView):
 
             elif inbox_item.object_type == 'follow':
                 try:
-                    follow_request = FollowRequest.objects.get(
-                        id=inbox_item.object_id)
-                    serialized_author = AuthorSerializer(follow_request.object)
+                    # follow_request = FollowRequest.objects.filter(
+                    #     object_id=id).first()
+                    author = Author.objects.filter(id=id).first()
+                    serialized_author = AuthorSerializer(author)
 
-                    res = requests.get(follow_request.actor)
-                    actor = res.json()
+                    actor = requests.get(inbox_item.object_id).json()
                     data.append({
                         "type": inbox_item.object_type,
                         "summary": f"{actor['displayName']} wants to follow {serialized_author.data['displayName']}",
@@ -578,28 +578,20 @@ class InboxView(APIView):
             return Response(data=post.data)
 
         elif type == "follow":
-            new_follower = data['actor']['id']
-            author_id = data['object']['id'].split('/')[-1]
-            author = None
 
-            try:
-                author = Author.objects.get(id=author_id)
-            except Author.DoesNotExist:
-                return Response(data=f"Author with id: {author_id} does not exist", status=status.HTTP_404_NOT_FOUND)
+            # follow_request = FollowRequestSerializer(data={
+            #     "actor": new_follower,
+            #     "object_id": author_id
+            # })
 
-            follow_request = FollowRequestSerializer(data={
-                "actor": new_follower,
-                "object_id": author_id
-            })
+            # if not follow_request.is_valid():
+            #     return Response(data=follow_request.errors, status=status.HTTP_400_BAD_REQUEST)
 
-            if not follow_request.is_valid():
-                return Response(data=follow_request.errors, status=status.HTTP_400_BAD_REQUEST)
-
-            follow_request.save()
+            # follow_request.save()
 
             inbox_item = InboxSerializer(data={
-                "author_id": id,
-                "object_id": follow_request.data['id'],
+                "author_id": data['object']['id'].split('/')[-1],
+                "object_id":  data['actor']['url'],
                 "object_type": type
             })
 
