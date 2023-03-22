@@ -95,12 +95,13 @@ class AuthenticateView(APIView):
         # return an http only cookie, but if needed to make it easier, we can not do http only cookies so JS can use it.
         response = Response(data={**serialized_author, "followers": followers, "following": following},
                             status=status.HTTP_200_OK)
+
         response.set_cookie(key='access', value=token,
                             secure=True, httponly=True, samesite='Lax')
 
         # this one is for dev
         # response.set_cookie(key='access', value=token,
-        #                     secure=False, samesite='Strict')
+        #                     secure=False, samesite='Lax')
         return response
 
 
@@ -427,8 +428,22 @@ class InboxView(APIView):
             )
         }
     )
-    @authenticated
     def get(self, request, id):
+
+        if (id == "undefined"):
+            page = int(request.GET.get('page', 1))
+            size = int(request.GET.get('size', 5))
+
+            offset = (page - 1) * size
+            posts = Post.objects.filter(visibility="PUBLIC")[
+                offset:offset+size]
+            serialized_posts = PostSerializer(posts, many=True)
+            return Response(data={
+                "type": "inbox",
+                "author": f"{HOST}/authors/{id}",
+                "items": serialized_posts.data
+            })
+
         inbox_items = Inbox.objects.filter(
             author_id=id).order_by('-created_at')
         data = []
