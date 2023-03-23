@@ -4,7 +4,7 @@ import requests
 from rest_framework import serializers
 from django.contrib.auth.hashers import make_password
 
-from .models import Author, Post, Comment, Inbox, Follower, FollowRequest, InboxComment, Like
+from .models import Author, Post, Comment, Inbox, Follower, Server, InboxComment, Like
 from .config import HOST
 
 
@@ -19,19 +19,14 @@ class AuthorSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         id = uuid.uuid4()
-        validated_data['id'] = id
+        validated_data['id'] = f"{HOST}/api/authors/{id}"
         validated_data['url'] = f"{HOST}/api/authors/{id}"
         validated_data['host'] = f"{HOST}/"
         validated_data[
-            'profileImage'] = f"https://api.dicebear.com/5.x/micah/svg?backgroundColor=b6e3f4,c0aede,ffd5dc,fffd01&seed={id}"
+            'profileImage'] = f"https://api.dicebear.com/5.x/micah/svg?backgroundColor=fffd01&seed={id}"
         # hash password
         validated_data['password'] = make_password(validated_data['password'])
         return Author.objects.create(**validated_data)
-
-    def to_representation(self, instance):
-        representation = super().to_representation(instance)
-        representation['id'] = f"{HOST}/api/authors/{instance.id}"
-        return representation
 
     def update(self, instance, validated_data):
         instance.displayName = validated_data.get(
@@ -55,6 +50,8 @@ class PostSerializer(serializers.ModelSerializer):
                   'published', 'visibility', 'categories', 'unlisted', 'author', 'type', 'author_id']
 
     def create(self, validated_data):
+        id = uuid.uuid4()
+        validated_data['id'] = f"{HOST}/api/authors/{validated_data['author_id']}/posts/{id}"
         return Post.objects.create(**validated_data)
 
     def update(self, instance, validated_data):
@@ -76,11 +73,6 @@ class PostSerializer(serializers.ModelSerializer):
         instance.save()
         return instance
 
-    def to_representation(self, instance):
-        representation = super().to_representation(instance)
-        representation['id'] = f"{HOST}/api/authors/{instance.author.id}/posts/{instance.id}"
-        return representation
-
 
 class CommentSerializer(serializers.ModelSerializer):
     type = serializers.ReadOnlyField()
@@ -94,6 +86,8 @@ class CommentSerializer(serializers.ModelSerializer):
                   'published', 'post_id', 'author', 'author_id']
 
     def create(self, validated_data):
+        id = uuid.uuid4()
+        validated_data['id'] = f"{HOST}/api/authors/{validated_data['author_id']}/posts/{validated_data['post_id']}/comments/{id}"
         return Comment.objects.create(**validated_data)
 
     def update(self, instance, validated_data):
@@ -105,10 +99,6 @@ class CommentSerializer(serializers.ModelSerializer):
         instance.save()
         return instance
 
-    def to_representation(self, instance):
-        representation = super().to_representation(instance)
-        representation['id'] = f"{HOST}/api/authors/{instance.author.id}/posts/{instance.post.id}/comments/{instance.id}"
-        return representation
 
 class InboxCommentSerializer(serializers.ModelSerializer):
     id = serializers.URLField(required=True)
@@ -123,10 +113,6 @@ class InboxCommentSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         return InboxComment.objects.create(**validated_data)
-
-    def to_representation(self, instance):
-        representation = super().to_representation(instance)
-        return representation
 
 
 class LikeSerializer(serializers.ModelSerializer):
@@ -173,15 +159,11 @@ class FollowerSerializer(serializers.ModelSerializer):
         return Follower.objects.create(**validated_data)
 
 
-class FollowRequestSerializer(serializers.ModelSerializer):
-    type = serializers.ReadOnlyField()
-    object_id = serializers.CharField(write_only=True)
-    object = AuthorSerializer(read_only=True)
-    actor = serializers.CharField(required=True)
+class ConnectedServerSerializer(serializers.ModelSerializer):
 
     class Meta:
-        model = FollowRequest
-        fields = ['id', 'type', 'actor', 'object', 'object_id']
+        model = Server
+        fields = ['url']
 
     def create(self, validated_data):
-        return FollowRequest.objects.create(**validated_data)
+        return Server.objects.create(**validated_data)

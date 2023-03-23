@@ -11,11 +11,11 @@ from .utils.swagger import SwaggerShape
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 
-from .models import Author, Post, Comment, Inbox, Follower, FollowRequest, InboxComment, Like
+from .models import Author, Post, Comment, Inbox, Follower, InboxComment, Like
 from .config import HOST
 from .utils.path_id import get_path_id
 from .utils.auth import authenticated
-from .serializers import AuthorSerializer, PostSerializer, CommentSerializer, InboxSerializer, FollowerSerializer, FollowRequestSerializer, InboxCommentSerializer,  LikeSerializer
+from .serializers import AuthorSerializer, PostSerializer, CommentSerializer, InboxSerializer, FollowerSerializer, InboxCommentSerializer,  LikeSerializer
 
 
 class RegisterView(APIView):
@@ -222,7 +222,7 @@ class PostsView(APIView):
     def post(self, request, author_id):
         post_data = request.data
         post_data["author_id"] = author_id
-        post = PostSerializer(data=post_data)
+        post: Post = PostSerializer(data=post_data)
 
         if not post.is_valid():
             return Response(data=post.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -421,7 +421,7 @@ class CommentsView(APIView):
         saved_comment = comment.data
         saved_comment['author'] = saved_comment['author']['id']
         saved_comment['post_id'] = post_id
-        
+
         # required since we store comments in the inbox, not really ideal :(
         inbox_comment = InboxCommentSerializer(data=saved_comment)
         if not inbox_comment.is_valid():
@@ -487,7 +487,7 @@ class InboxView(APIView):
                 # format stuff
                 res = requests.get(like.author)
                 author_obj = res.json()
-                del formatted_like['id'] # not needed in final representation
+                del formatted_like['id']  # not needed in final representation
                 formatted_like['author'] = author_obj
                 formatted_like['summary'] = f"{author_obj['displayName']} likes your post"
 
@@ -512,7 +512,8 @@ class InboxView(APIView):
                     return Response(data="something went wrong", status=status.HTTP_400_BAD_REQUEST)
 
             elif inbox_item.object_type == 'comment':
-                inbox_comment = InboxComment.objects.get(id=inbox_item.object_id)
+                inbox_comment = InboxComment.objects.get(
+                    id=inbox_item.object_id)
                 serialized_comment = InboxCommentSerializer(inbox_comment)
                 res = requests.get(serialized_comment.data['author'])
                 formatted_comment = serialized_comment.data
@@ -670,6 +671,7 @@ class LikesView(APIView):
         serialized_post_like = LikeSerializer(post_likes, many=True)
         return Response(data=serialized_post_like.data)
 
+
 class CommentLikesView(APIView):
     @swagger_auto_schema(
         responses={
@@ -704,7 +706,7 @@ class LikedView(APIView):
     def get(self, request, id):
         author = f"{'http://localhost:8000'}/api/authors/{id}"
         liked_objects = Like.objects.filter(author=author)
-        
+
         serialized_liked_objects = LikeSerializer(liked_objects, many=True)
 
         data = {
