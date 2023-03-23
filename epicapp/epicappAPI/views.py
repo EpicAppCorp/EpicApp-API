@@ -470,11 +470,27 @@ class InboxView(APIView):
 
         inbox_items = Inbox.objects.filter(
             author_id=id).order_by('-created_at')
+        print(inbox_items)
         data = []
         for inbox_item in inbox_items:
             if inbox_item.object_type == 'post':
                 res = requests.get(inbox_item.object_id)
                 data.append(res.json())
+
+            elif inbox_item.object_type == 'like':
+                post_like = PostLike.objects.get(id=inbox_item.object_id)
+                serialized_post_like = PostLikeSerializer(post_like)
+
+                formatted_post_like = serialized_post_like.data
+
+                # format stuff
+                res = requests.get(post_like.author)
+                author_obj = res.json()
+                del formatted_post_like['id'] # not needed in final representation
+                formatted_post_like['author'] = author_obj
+                formatted_post_like['summary'] = f"{author_obj['displayName']} likes your post"
+
+                data.append(formatted_post_like)
 
             elif inbox_item.object_type == 'follow':
                 try:
@@ -535,19 +551,26 @@ class InboxView(APIView):
                 except Post.DoesNotExist:
                     return Response(data="Post does not exist", status=status.HTTP_400_BAD_REQUEST)
 
-                data['post_id'] = object_id
+                data['author'] = data['author']['id']
                 serialized_like = PostLikeSerializer(data=data)
 
                 if not serialized_like.is_valid():
-                    return Response(data="something went wrong", status=status.HTTP_400_BAD_REQUEST)
+                    return Response(data=serialized_like.errors, status=status.HTTP_400_BAD_REQUEST)
 
                 serialized_like.save()
 
-                inbox_item = Inbox(
-                    content_object=serialized_like.instance, author_id=id)
+                inbox_item = InboxSerializer(data={
+                    "author_id": id,
+                    "object_id": serialized_like.data['id'],
+                    "object_type": type
+                })
+
+                if not inbox_item.is_valid():
+                    return Response(data=inbox_item.errors, status=status.HTTP_400_BAD_REQUEST)
+
                 inbox_item.save()
 
-                return Response(data=serialized_like.data)
+                return Response()
 
             elif url_components[-2] == "comments":
                 try:

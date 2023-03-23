@@ -129,13 +129,12 @@ class InboxCommentSerializer(serializers.ModelSerializer):
 
 
 class PostLikeSerializer(serializers.ModelSerializer):
-    author = AuthorSerializer(read_only=True)
-    author_id = serializers.CharField(write_only=True)
-    post_id = serializers.CharField(write_only=True)
+    author = serializers.URLField()
+    object = serializers.URLField()
 
     class Meta:
         model = PostLike
-        fields = ['id', 'type', 'author', 'author_id', 'post_id']
+        fields = ['id', 'type', 'author', 'object']
 
     def create(self, validated_data):
         return PostLike.objects.create(**validated_data)
@@ -143,8 +142,6 @@ class PostLikeSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         representation = super().to_representation(instance)
         representation["@context"] = "https://www.w3.org/ns/activitystreams"
-        representation["summary"] = f"{instance.author.displayName} Likes your post"
-        representation["object"] = f"{HOST}/api/authors/{instance.author.id}/posts/{instance.post_id}"
         return representation
 
 
