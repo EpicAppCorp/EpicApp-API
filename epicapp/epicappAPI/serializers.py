@@ -3,7 +3,7 @@ import uuid
 from rest_framework import serializers
 from django.contrib.auth.hashers import make_password
 
-from .models import Author, Post, Comment, PostLike, CommentLike, Inbox, Follower, FollowRequest
+from .models import Author, Post, Comment, PostLike, CommentLike, Inbox, Follower, FollowRequest, InboxComment
 from .config import HOST
 
 
@@ -26,6 +26,11 @@ class AuthorSerializer(serializers.ModelSerializer):
         # hash password
         validated_data['password'] = make_password(validated_data['password'])
         return Author.objects.create(**validated_data)
+
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        representation['id'] = f"{HOST}/api/authors/{instance.id}"
+        return representation
 
     def update(self, instance, validated_data):
         instance.displayName = validated_data.get(
@@ -102,6 +107,24 @@ class CommentSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         representation = super().to_representation(instance)
         representation['id'] = f"{HOST}/api/authors/{instance.author.id}/posts/{instance.post.id}/comments/{instance.id}"
+        return representation
+
+class InboxCommentSerializer(serializers.ModelSerializer):
+    id = serializers.URLField(required=True)
+    type = serializers.ReadOnlyField()
+    author = serializers.URLField(required=True)
+    post_id = serializers.CharField(write_only=True)
+
+    class Meta:
+        model = Comment
+        fields = ['id', 'type', 'comment', 'contentType',
+                  'published', 'post_id', 'author']
+
+    def create(self, validated_data):
+        return InboxComment.objects.create(**validated_data)
+
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
         return representation
 
 

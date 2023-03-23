@@ -122,3 +122,12 @@ class FollowRequest(models.Model):
     object = models.ForeignKey(Author, on_delete=models.CASCADE)
     # author who made follow request
     actor = models.URLField(blank=False, editable=False)
+
+class InboxComment(models.Model):
+    type = "comment"
+    id = models.URLField(blank=False, unique=True, primary_key=True)
+    comment = models.TextField(max_length=500)
+    contentType = "text/markdown"  # not sure if this can be anything else
+    published = models.DateTimeField(auto_now_add=True)
+    post = models.ForeignKey(Post, on_delete=models.CASCADE)
+    author = models.URLField(blank=False, editable=False)
