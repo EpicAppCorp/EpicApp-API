@@ -541,7 +541,7 @@ class InboxView(APIView):
         data = request.data
         type = data["type"]
 
-        if type == "like":
+        if type.upper() == "LIKE":
             data['author_id'] = id
             url_components = data['object'].split('/')
             object_id = url_components[-1]
@@ -571,7 +571,7 @@ class InboxView(APIView):
             inbox_item = InboxSerializer(data={
                 "author_id": id,
                 "object_id": serialized_like.data['id'],
-                "object_type": type
+                "object_type": "like"
             })
 
             if not inbox_item.is_valid():
@@ -581,12 +581,12 @@ class InboxView(APIView):
 
             return Response()
 
-        elif type == "post":
+        elif type.upper() == "POST":
             object_id = data["id"]
             inbox_item = InboxSerializer(data={
                 "author_id": id,
                 "object_id": object_id,
-                "object_type": type
+                "object_type": "post"
             })
 
             if not inbox_item.is_valid():
@@ -596,7 +596,7 @@ class InboxView(APIView):
 
             return Response(data={}, status=status.HTTP_200_OK)
 
-        elif type == "comment":
+        elif type.upper() == "COMMENT":
             comment_data = data
             comment_url = comment_data['id'].split('/')
             post_id = comment_url[-3]
@@ -612,7 +612,7 @@ class InboxView(APIView):
             inbox_item = InboxSerializer(data={
                 "author_id": id,
                 "object_id": comment.data['id'],
-                "object_type": type
+                "object_type": "comment"
             })
             if not inbox_item.is_valid():
                 return Response(data=inbox_item.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -621,7 +621,7 @@ class InboxView(APIView):
 
             return Response()
 
-        elif type == "follow":
+        elif type.upper() == "FOLLOW":
 
             # follow_request = FollowRequestSerializer(data={
             #     "actor": new_follower,
@@ -636,7 +636,7 @@ class InboxView(APIView):
             inbox_item = InboxSerializer(data={
                 "author_id": data['object']['id'].split('/')[-1],
                 "object_id":  data['actor']['url'],
-                "object_type": type
+                "object_type": "follow"
             })
 
             if not inbox_item.is_valid():
