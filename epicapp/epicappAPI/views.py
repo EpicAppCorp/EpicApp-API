@@ -203,7 +203,7 @@ class PostsView(APIView):
             posts = Post.objects.filter(author_id=author_id)[
                 offset:offset+size]
             serialized_posts = PostSerializer(posts, many=True)
-            return Response(data=serialized_posts.data)
+            return Response(data={"type": "posts", "items": serialized_posts.data})
         except Author.DoesNotExist:
             return Response(data=f"Author with id: {author_id} does not exist", status=status.HTTP_404_NOT_FOUND)
 
