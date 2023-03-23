@@ -11,10 +11,11 @@ from .utils.swagger import SwaggerShape
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 
-from .models import Author, Post, Comment, PostLike, CommentLike, Inbox, Follower, FollowRequest
+from .models import Author, Post, Comment, PostLike, CommentLike, Inbox, Follower, FollowRequest, InboxComment
 from .config import HOST
+from .utils.path_id import get_path_id
 from .utils.auth import authenticated
-from .serializers import AuthorSerializer, PostSerializer, CommentSerializer, PostLikeSerializer, CommentLikeSerializer, InboxSerializer, FollowerSerializer, FollowRequestSerializer
+from .serializers import AuthorSerializer, PostSerializer, CommentSerializer, PostLikeSerializer, CommentLikeSerializer, InboxSerializer, FollowerSerializer, FollowRequestSerializer, InboxCommentSerializer
 
 
 class RegisterView(APIView):
@@ -228,6 +229,9 @@ class PostsView(APIView):
 
         post.save()
 
+        if post.data['visibility'] == 'PUBLIC':
+            return Response(data=post.data)
+
         for follower_url in Follower.objects.filter(author=author_id).values_list("follower", flat=True):
             # TODO: PROPER BASIC AUTH FROM SERVER
             # fire and forget, if it doesn't make it to the follower oh well ¯\_(ツ)_/¯
@@ -413,6 +417,26 @@ class CommentsView(APIView):
 
         comment.save()
 
+        # TODO: somehow need to get the id of the inbox of the user to send this to if post is a remote one
+        saved_comment = comment.data
+        saved_comment['author'] = saved_comment['author']['id']
+        saved_comment['post_id'] = post_id
+        
+        # required since we store comments in the inbox, not really ideal :(
+        inbox_comment = InboxCommentSerializer(data=saved_comment)
+        if not inbox_comment.is_valid():
+            return Response(data=inbox_comment.errors, status=status.HTTP_400_BAD_REQUEST)
+        inbox_comment.save()
+
+        inbox_item = InboxSerializer(data={
+            "author_id": author_id,
+            "object_id": comment.data['id'],
+            "object_type": "comment"
+        })
+        if not inbox_item.is_valid():
+            return Response(data=inbox_item.errors, status=status.HTTP_400_BAD_REQUEST)
+        inbox_item.save()
+
         return Response(data=comment.data)
 
 
@@ -469,6 +493,14 @@ class InboxView(APIView):
 
                 except FollowRequest.DoesNotExist:
                     return Response(data="something went wrong", status=status.HTTP_400_BAD_REQUEST)
+
+            elif inbox_item.object_type == 'comment':
+                inbox_comment = InboxComment.objects.get(id=inbox_item.object_id)
+                serialized_comment = InboxCommentSerializer(inbox_comment)
+                res = requests.get(serialized_comment.data['author'])
+                formatted_comment = serialized_comment.data
+                formatted_comment['author'] = res.json()
+                data.append(formatted_comment)
 
         data = {
             "type": "inbox",
@@ -561,21 +593,29 @@ class InboxView(APIView):
             return Response(data={}, status=status.HTTP_200_OK)
 
         elif type == "comment":
-            # TODO: find a better way to supply post id
-            comment_data = request.data
-            comment_data["post_id"] = request.data["post_id"]
-            comment_data["author_id"] = request.data["author"]["id"]
-            comment = CommentSerializer(data=comment_data)
+            comment_data = data
+            comment_url = comment_data['id'].split('/')
+            post_id = comment_url[-3]
+            comment_data["post_id"] = post_id
+            comment_data["author"] = '/'.join(comment_url[:-4])
+            comment = InboxCommentSerializer(data=comment_data)
 
             if not comment.is_valid():
                 return Response(data=comment.errors, status=status.HTTP_400_BAD_REQUEST)
 
             comment.save()
 
-            inbox_item = Inbox(content_object=comment.instance, author_id=id)
+            inbox_item = InboxSerializer(data={
+                "author_id": id,
+                "object_id": comment.data['id'],
+                "object_type": type
+            })
+            if not inbox_item.is_valid():
+                return Response(data=inbox_item.errors, status=status.HTTP_400_BAD_REQUEST)
+
             inbox_item.save()
 
-            return Response(data=post.data)
+            return Response()
 
         elif type == "follow":
 
