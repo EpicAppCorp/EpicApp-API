@@ -1,9 +1,10 @@
 import uuid
+import requests
 
 from rest_framework import serializers
 from django.contrib.auth.hashers import make_password
 
-from .models import Author, Post, Comment, PostLike, CommentLike, Inbox, Follower, Server
+from .models import Author, Post, Comment, Inbox, Follower, Server, InboxComment, Like
 from .config import HOST
 
 
@@ -26,6 +27,11 @@ class AuthorSerializer(serializers.ModelSerializer):
         # hash password
         validated_data['password'] = make_password(validated_data['password'])
         return Author.objects.create(**validated_data)
+
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        representation['id'] = f"{HOST}/api/authors/{instance.id}"
+        return representation
 
     def update(self, instance, validated_data):
         instance.displayName = validated_data.get(
@@ -105,45 +111,43 @@ class CommentSerializer(serializers.ModelSerializer):
         return representation
 
 
-class PostLikeSerializer(serializers.ModelSerializer):
-    author = AuthorSerializer(read_only=True)
-    author_id = serializers.CharField(write_only=True)
+class InboxCommentSerializer(serializers.ModelSerializer):
+    id = serializers.URLField(required=True)
+    type = serializers.ReadOnlyField()
+    author = serializers.URLField(required=True)
     post_id = serializers.CharField(write_only=True)
 
     class Meta:
-        model = PostLike
-        fields = ['id', 'type', 'author', 'author_id', 'post_id']
+        model = Comment
+        fields = ['id', 'type', 'comment', 'contentType',
+                  'published', 'post_id', 'author']
 
     def create(self, validated_data):
-        return PostLike.objects.create(**validated_data)
+        return InboxComment.objects.create(**validated_data)
 
     def to_representation(self, instance):
         representation = super().to_representation(instance)
-        representation["@context"] = "https://www.w3.org/ns/activitystreams"
-        representation["summary"] = f"{instance.author.displayName} Likes your post"
-        representation["object"] = f"{HOST}/api/authors/{instance.author.id}/posts/{instance.post_id}"
         return representation
 
 
-class CommentLikeSerializer(serializers.ModelSerializer):
-    author = AuthorSerializer(read_only=True)
-    author_id = serializers.CharField(write_only=True)
-    post_id = serializers.CharField()
-    comment_id = serializers.CharField(write_only=True)
+class LikeSerializer(serializers.ModelSerializer):
+    author = serializers.URLField()
+    object = serializers.URLField()
 
     class Meta:
-        model = CommentLike
-        fields = ['id', 'type', 'author', 'author_id', 'comment_id', 'post_id']
+        model = Like
+        fields = ['id', 'type', 'author', 'object']
 
     def create(self, validated_data):
-        return CommentLike.objects.create(**validated_data)
+        return Like.objects.create(**validated_data)
 
     def to_representation(self, instance):
         representation = super().to_representation(instance)
         representation["@context"] = "https://www.w3.org/ns/activitystreams"
-        representation["summary"] = f"{instance.author.displayName} Likes your comment"
-        representation["object"] = f"{HOST}/api/authors/{instance.author.id}/posts/{instance.post_id}/comments/{instance.id}"
-        del representation['post_id']  # only need for the url in object
+        res = requests.get(representation['author'])
+        if not res.ok:
+            raise Exception("error getting author")
+        representation['author'] = res.json()
         return representation
 
 

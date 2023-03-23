@@ -11,10 +11,11 @@ from .utils.swagger import SwaggerShape
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 
-from .models import Author, Post, Comment, PostLike, CommentLike, Inbox, Follower
+from .models import Author, Post, Comment, Inbox, Follower, InboxComment, Like
 from .config import HOST
+from .utils.path_id import get_path_id
 from .utils.auth import authenticated
-from .serializers import AuthorSerializer, PostSerializer, CommentSerializer, PostLikeSerializer, CommentLikeSerializer, InboxSerializer, FollowerSerializer
+from .serializers import AuthorSerializer, PostSerializer, CommentSerializer, InboxSerializer, FollowerSerializer, InboxCommentSerializer,  LikeSerializer
 
 
 class RegisterView(APIView):
@@ -227,7 +228,10 @@ class PostsView(APIView):
             return Response(data=post.errors, status=status.HTTP_400_BAD_REQUEST)
 
         post.save()
-        post.visibility
+
+        if post.data['visibility'] == 'PUBLIC':
+            return Response(data=post.data)
+
         for follower_url in Follower.objects.filter(author=author_id).values_list("follower", flat=True):
             # TODO: PROPER BASIC AUTH FROM SERVER
             # fire and forget, if it doesn't make it to the follower oh well ¯\_(ツ)_/¯
@@ -413,6 +417,26 @@ class CommentsView(APIView):
 
         comment.save()
 
+        # TODO: somehow need to get the id of the inbox of the user to send this to if post is a remote one
+        saved_comment = comment.data
+        saved_comment['author'] = saved_comment['author']['id']
+        saved_comment['post_id'] = post_id
+
+        # required since we store comments in the inbox, not really ideal :(
+        inbox_comment = InboxCommentSerializer(data=saved_comment)
+        if not inbox_comment.is_valid():
+            return Response(data=inbox_comment.errors, status=status.HTTP_400_BAD_REQUEST)
+        inbox_comment.save()
+
+        inbox_item = InboxSerializer(data={
+            "author_id": author_id,
+            "object_id": comment.data['id'],
+            "object_type": "comment"
+        })
+        if not inbox_item.is_valid():
+            return Response(data=inbox_item.errors, status=status.HTTP_400_BAD_REQUEST)
+        inbox_item.save()
+
         return Response(data=comment.data)
 
 
@@ -446,11 +470,28 @@ class InboxView(APIView):
 
         inbox_items = Inbox.objects.filter(
             author_id=id).order_by('-created_at')
+
         data = []
         for inbox_item in inbox_items:
             if inbox_item.object_type == 'post':
                 res = requests.get(inbox_item.object_id)
                 data.append(res.json())
+
+            elif inbox_item.object_type == 'like':
+
+                like = Like.objects.get(id=inbox_item.object_id)
+                serialized_like = LikeSerializer(like)
+
+                formatted_like = serialized_like.data
+
+                # format stuff
+                res = requests.get(like.author)
+                author_obj = res.json()
+                del formatted_like['id']  # not needed in final representation
+                formatted_like['author'] = author_obj
+                formatted_like['summary'] = f"{author_obj['displayName']} likes your post"
+
+                data.append(formatted_like)
 
             elif inbox_item.object_type == 'follow':
                 try:
@@ -469,6 +510,15 @@ class InboxView(APIView):
 
                 except FollowRequest.DoesNotExist:
                     return Response(data="something went wrong", status=status.HTTP_400_BAD_REQUEST)
+
+            elif inbox_item.object_type == 'comment':
+                inbox_comment = InboxComment.objects.get(
+                    id=inbox_item.object_id)
+                serialized_comment = InboxCommentSerializer(inbox_comment)
+                res = requests.get(serialized_comment.data['author'])
+                formatted_comment = serialized_comment.data
+                formatted_comment['author'] = res.json()
+                data.append(formatted_comment)
 
         data = {
             "type": "inbox",
@@ -492,7 +542,7 @@ class InboxView(APIView):
         data = request.data
         type = data["type"]
 
-        if type == "like":
+        if type.upper() == "LIKE":
             data['author_id'] = id
             url_components = data['object'].split('/')
             object_id = url_components[-1]
@@ -502,55 +552,42 @@ class InboxView(APIView):
                     Post.objects.get(id=object_id)
                 except Post.DoesNotExist:
                     return Response(data="Post does not exist", status=status.HTTP_400_BAD_REQUEST)
-
-                data['post_id'] = object_id
-                serialized_like = PostLikeSerializer(data=data)
-
-                if not serialized_like.is_valid():
-                    return Response(data="something went wrong", status=status.HTTP_400_BAD_REQUEST)
-
-                serialized_like.save()
-
-                inbox_item = Inbox(
-                    content_object=serialized_like.instance, author_id=id)
-                inbox_item.save()
-
-                return Response(data=serialized_like.data)
-
             elif url_components[-2] == "comments":
                 try:
-                    comment = Comment.objects.get(id=object_id)
+                    Comment.objects.get(id=object_id)
                 except Post.DoesNotExist:
                     return Response(data="Post does not exist", status=status.HTTP_400_BAD_REQUEST)
                 except Comment.DoesNotExist:
                     return Response(data="Comment does not exist", status=status.HTTP_400_BAD_REQUEST)
 
-                data['comment_id'] = object_id
-                data['post_id'] = url_components[-3]
-                serialized_like = CommentLikeSerializer(data=data)
+            data['author'] = data['author']['id']
+            serialized_like = LikeSerializer(data=data)
+            serialized_like.skip_representations = True
 
-                if not serialized_like.is_valid():
-                    return Response(data="something went wrong", status=status.HTTP_400_BAD_REQUEST)
+            if not serialized_like.is_valid():
+                return Response(data=serialized_like.errors, status=status.HTTP_400_BAD_REQUEST)
 
-                serialized_like.save()
+            serialized_like.save()
 
-                inbox_item = Inbox(
-                    content_object=serialized_like.instance, author_id=id)
-                inbox_item.save()
+            inbox_item = InboxSerializer(data={
+                "author_id": id,
+                "object_id": serialized_like.data['id'],
+                "object_type": "like"
+            })
 
-                comment_data = serialized_like.data
+            if not inbox_item.is_valid():
+                return Response(data=inbox_item.errors, status=status.HTTP_400_BAD_REQUEST)
 
-                return Response(data=comment_data)
+            inbox_item.save()
 
-            else:
-                return Response("Wtf you tryna do", status=status.HTTP_400_BAD_REQUEST)
+            return Response()
 
-        elif type == "post":
+        elif type.upper() == "POST":
             object_id = data["id"]
             inbox_item = InboxSerializer(data={
                 "author_id": id,
                 "object_id": object_id,
-                "object_type": type
+                "object_type": "post"
             })
 
             if not inbox_item.is_valid():
@@ -560,24 +597,32 @@ class InboxView(APIView):
 
             return Response(data={}, status=status.HTTP_200_OK)
 
-        elif type == "comment":
-            # TODO: find a better way to supply post id
-            comment_data = request.data
-            comment_data["post_id"] = request.data["post_id"]
-            comment_data["author_id"] = request.data["author"]["id"]
-            comment = CommentSerializer(data=comment_data)
+        elif type.upper() == "COMMENT":
+            comment_data = data
+            comment_url = comment_data['id'].split('/')
+            post_id = comment_url[-3]
+            comment_data["post_id"] = post_id
+            comment_data["author"] = '/'.join(comment_url[:-4])
+            comment = InboxCommentSerializer(data=comment_data)
 
             if not comment.is_valid():
                 return Response(data=comment.errors, status=status.HTTP_400_BAD_REQUEST)
 
             comment.save()
 
-            inbox_item = Inbox(content_object=comment.instance, author_id=id)
+            inbox_item = InboxSerializer(data={
+                "author_id": id,
+                "object_id": comment.data['id'],
+                "object_type": "comment"
+            })
+            if not inbox_item.is_valid():
+                return Response(data=inbox_item.errors, status=status.HTTP_400_BAD_REQUEST)
+
             inbox_item.save()
 
-            return Response(data=post.data)
+            return Response()
 
-        elif type == "follow":
+        elif type.upper() == "FOLLOW":
 
             # follow_request = FollowRequestSerializer(data={
             #     "actor": new_follower,
@@ -592,7 +637,7 @@ class InboxView(APIView):
             inbox_item = InboxSerializer(data={
                 "author_id": data['object']['id'].split('/')[-1],
                 "object_id":  data['actor']['url'],
-                "object_type": type
+                "object_type": "follow"
             })
 
             if not inbox_item.is_valid():
@@ -621,8 +666,9 @@ class LikesView(APIView):
         }
     )
     def get(self, request, author_id, post_id):
-        post_likes = PostLike.objects.filter(post_id=post_id)
-        serialized_post_like = PostLikeSerializer(post_likes, many=True)
+        object = f"{HOST}/api/authors/{author_id}/posts/{post_id}"
+        post_likes = Like.objects.filter(object=object)
+        serialized_post_like = LikeSerializer(post_likes, many=True)
         return Response(data=serialized_post_like.data)
 
 
@@ -639,10 +685,10 @@ class CommentLikesView(APIView):
         }
     )
     def get(self, request, author_id, post_id, comment_id):
-        comment_likes = CommentLike.objects.filter(comment_id=comment_id)
-        serialized_comment_like = CommentLikeSerializer(
-            comment_likes, many=True)
-        return Response(data=serialized_comment_like.data)
+        object = f"{HOST}/api/authors/{author_id}/posts/{post_id}"
+        post_likes = Like.objects.filter(object=object)
+        serialized_post_like = LikeSerializer(post_likes, many=True)
+        return Response(data=serialized_post_like.data)
 
 
 class LikedView(APIView):
@@ -658,17 +704,15 @@ class LikedView(APIView):
         }
     )
     def get(self, request, id):
-        liked_comments = CommentLike.objects.filter(author_id=id)
-        liked_posts = PostLike.objects.filter(author_id=id)
+        author = f"{'http://localhost:8000'}/api/authors/{id}"
+        liked_objects = Like.objects.filter(author=author)
 
-        serialized_liked_comments = CommentLikeSerializer(
-            liked_comments, many=True)
-        serialized_liked_posts = PostLikeSerializer(liked_posts, many=True)
+        serialized_liked_objects = LikeSerializer(liked_objects, many=True)
 
         data = {
             "type": "liked",
             # TODO: find better way to combine
-            "items": serialized_liked_posts.data + serialized_liked_comments.data
+            "items": serialized_liked_objects.data
         }
 
         return Response(data)

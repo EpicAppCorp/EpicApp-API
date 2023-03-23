@@ -70,19 +70,15 @@ class Comment(models.Model):
     author = models.ForeignKey(Author, on_delete=models.CASCADE)
 
 
-class PostLike(models.Model):
+class Like(models.Model):
     type = "Like"
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    author = models.ForeignKey(Author, on_delete=models.CASCADE)
-    post = models.ForeignKey(Post, on_delete=models.CASCADE)
+    author = models.URLField(blank=False, editable=False, null=False)
+    object = models.URLField(blank=False, editable=False, null=False)
+    created_at = models.DateTimeField(auto_now_add=True)
 
-
-class CommentLike(models.Model):
-    type = "Like"
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    author = models.ForeignKey(Author, on_delete=models.CASCADE)
-    comment = models.ForeignKey(Comment, on_delete=models.CASCADE)
-    post = models.ForeignKey(Post, on_delete=models.CASCADE)
+    class Meta:
+        ordering = ('created_at', )
 
 
 class Inbox(models.Model):
@@ -117,3 +113,13 @@ class Server(models.Model):
     url = models.TextField()
     token = models.TextField()
     issuer = models.TextField()
+
+
+class InboxComment(models.Model):
+    type = "comment"
+    id = models.URLField(blank=False, unique=True, primary_key=True)
+    comment = models.TextField(max_length=500)
+    contentType = "text/markdown"  # not sure if this can be anything else
+    published = models.DateTimeField(auto_now_add=True)
+    post = models.ForeignKey(Post, on_delete=models.CASCADE)
+    author = models.URLField(blank=False, editable=False)
