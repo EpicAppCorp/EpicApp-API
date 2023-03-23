@@ -71,20 +71,15 @@ class Comment(models.Model):
     post = models.ForeignKey(Post, on_delete=models.CASCADE)
     author = models.ForeignKey(Author, on_delete=models.CASCADE)
 
-
-class PostLike(models.Model):
+class Like(models.Model):
     type = "Like"
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     author = models.URLField(blank=False, editable=False, null=False)
     object = models.URLField(blank=False, editable=False, null=False)
-    
+    created_at = models.DateTimeField(auto_now_add=True)
 
-class CommentLike(models.Model):
-    type = "Like"
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    author = models.URLField(blank=False, editable=False, null=False)
-    object = models.URLField(blank=False, editable=False, null=False)
-
+    class Meta:
+        ordering = ('created_at', )
 
 class Inbox(models.Model):
     class ObjectType(models.TextChoices):
