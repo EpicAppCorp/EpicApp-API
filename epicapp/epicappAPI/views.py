@@ -11,10 +11,10 @@ from .utils.swagger import SwaggerShape
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 
-from .models import Author, Post, Comment, PostLike, CommentLike, Inbox, Follower, FollowRequest
+from .models import Author, Post, Comment, PostLike, CommentLike, Inbox, Follower
 from .config import HOST
 from .utils.auth import authenticated
-from .serializers import AuthorSerializer, PostSerializer, CommentSerializer, PostLikeSerializer, CommentLikeSerializer, InboxSerializer, FollowerSerializer, FollowRequestSerializer
+from .serializers import AuthorSerializer, PostSerializer, CommentSerializer, PostLikeSerializer, CommentLikeSerializer, InboxSerializer, FollowerSerializer
 
 
 class RegisterView(APIView):
@@ -221,13 +221,13 @@ class PostsView(APIView):
     def post(self, request, author_id):
         post_data = request.data
         post_data["author_id"] = author_id
-        post = PostSerializer(data=post_data)
+        post: Post = PostSerializer(data=post_data)
 
         if not post.is_valid():
             return Response(data=post.errors, status=status.HTTP_400_BAD_REQUEST)
 
         post.save()
-
+        post.visibility
         for follower_url in Follower.objects.filter(author=author_id).values_list("follower", flat=True):
             # TODO: PROPER BASIC AUTH FROM SERVER
             # fire and forget, if it doesn't make it to the follower oh well ¯\_(ツ)_/¯

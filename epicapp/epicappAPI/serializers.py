@@ -3,7 +3,7 @@ import uuid
 from rest_framework import serializers
 from django.contrib.auth.hashers import make_password
 
-from .models import Author, Post, Comment, PostLike, CommentLike, Inbox, Follower, FollowRequest
+from .models import Author, Post, Comment, PostLike, CommentLike, Inbox, Follower, Server
 from .config import HOST
 
 
@@ -18,11 +18,11 @@ class AuthorSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         id = uuid.uuid4()
-        validated_data['id'] = id
+        validated_data['id'] = f"{HOST}/api/authors/{id}"
         validated_data['url'] = f"{HOST}/api/authors/{id}"
         validated_data['host'] = f"{HOST}/"
         validated_data[
-            'profileImage'] = f"https://api.dicebear.com/5.x/micah/svg?backgroundColor=b6e3f4,c0aede,ffd5dc,fffd01&seed={id}"
+            'profileImage'] = f"https://api.dicebear.com/5.x/micah/svg?backgroundColor=fffd01&seed={id}"
         # hash password
         validated_data['password'] = make_password(validated_data['password'])
         return Author.objects.create(**validated_data)
@@ -170,15 +170,8 @@ class FollowerSerializer(serializers.ModelSerializer):
         return Follower.objects.create(**validated_data)
 
 
-class FollowRequestSerializer(serializers.ModelSerializer):
-    type = serializers.ReadOnlyField()
-    object_id = serializers.CharField(write_only=True)
-    object = AuthorSerializer(read_only=True)
-    actor = serializers.CharField(required=True)
+class ConnectedServerSerializer(serializers.ModelSerializer):
 
     class Meta:
-        model = FollowRequest
-        fields = ['id', 'type', 'actor', 'object', 'object_id']
-
-    def create(self, validated_data):
-        return FollowRequest.objects.create(**validated_data)
+        model = Server
+        fields = ['url']

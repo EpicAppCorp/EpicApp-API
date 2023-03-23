@@ -3,8 +3,6 @@ import uuid
 from django.db import models
 from django.contrib.postgres.fields import ArrayField
 from django.contrib.auth.models import AbstractUser
-from django.contrib.contenttypes.fields import GenericForeignKey
-from django.contrib.contenttypes.models import ContentType
 
 
 class Author(AbstractUser):
@@ -94,6 +92,7 @@ class Inbox(models.Model):
         post = 'post'
         follower = 'follow'
 
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     author = models.ForeignKey(Author, on_delete=models.CASCADE)
     object_id = models.CharField(max_length=255)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -114,11 +113,7 @@ class Follower(models.Model):
         unique_together = (('author', 'follower'))
 
 
-class FollowRequest(models.Model):
-    type = "Follow"
-    id = models.CharField(primary_key=True, max_length=255,
-                          default=uuid.uuid4, editable=False)
-    # the author who is being followed
-    object = models.ForeignKey(Author, on_delete=models.CASCADE)
-    # author who made follow request
-    actor = models.URLField(blank=False, editable=False)
+class Server(models.Model):
+    url = models.TextField()
+    token = models.TextField()
+    issuer = models.TextField()
