@@ -8,7 +8,7 @@ from .models import Author, Post, Comment, Inbox, Follower, Server, InboxComment
 from .config import HOST
 
 
-class AuthorSerializer(serializers.ModelSerializer):
+class AuthorSerializer(serializers.ModelSerializer, ):
     profileImage = serializers.CharField(required=False)
 
     class Meta:

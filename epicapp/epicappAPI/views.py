@@ -79,20 +79,19 @@ class AuthenticateView(APIView):
         # if hash passwords aren't the same
         if not author.check_password(request.data["password"]):
             return Response(data="Invalid credentials!", status=status.HTTP_401_UNAUTHORIZED)
+        serialized_author = AuthorSerializer(author).data
 
-        # create token with 60 min expiry
+        # create token with one year expiry
         token = jwt.encode(
             {
-                'id': AuthorSerializer(author).data['id'],
+                'id': author.id,
                 'exp': datetime.datetime.utcnow() + datetime.timedelta(days=365),
                 'iat': datetime.datetime.utcnow()
             }, "SECRET_NOT_USING_ENV_CAUSE_WHO_CARES", algorithm='HS256')
 
-        serialized_author = AuthorSerializer(author).data
-
         # gets followers on login
         followers = Follower.objects.filter(
-            author=serialized_author['id']).count()
+            author=author.id).count()
         following = Follower.objects.filter(
             follower=serialized_author['id']).count()
 
@@ -138,11 +137,14 @@ class AuthorDetails(APIView):
     )
     @authenticated
     def get(self, request, format=None):
+
+        author = Author.objects.filter(id=request._auth['id']).first()
+        serialized_author = AuthorSerializer(author).data
+
         followers = Follower.objects.filter(author=request._auth['id']).count()
         following = Follower.objects.filter(
-            follower=f"{HOST}/api/authors/{request._auth['id']}").count()
-        author = Author.objects.filter(id=request._auth['id']).first()
-        return Response(data={**AuthorSerializer(author).data, "followers": followers, "following": following}, status=status.HTTP_200_OK)
+            follower=serialized_author['id']).count()
+        return Response(data={**serialized_author, "followers": followers, "following": following}, status=status.HTTP_200_OK)
 
 
 class AuthorView(APIView):
@@ -497,22 +499,18 @@ class InboxView(APIView):
                 data.append(formatted_like)
 
             elif inbox_item.object_type == 'follow':
-                try:
-                    # follow_request = FollowRequest.objects.filter(
-                    #     object_id=id).first()
-                    author = Author.objects.filter(id=id).first()
-                    serialized_author = AuthorSerializer(author)
+                # follow_request = FollowRequest.objects.filter(
+                #     object_id=id).first()
+                author = Author.objects.filter(id=id).first()
+                serialized_author = AuthorSerializer(author)
 
-                    actor = requests.get(inbox_item.object_id).json()
-                    data.append({
-                        "type": inbox_item.object_type,
-                        "summary": f"{actor['displayName']} wants to follow {serialized_author.data['displayName']}",
-                        "actor": actor,
-                        "object": serialized_author.data
-                    })
-
-                except FollowRequest.DoesNotExist:
-                    return Response(data="something went wrong", status=status.HTTP_400_BAD_REQUEST)
+                actor = requests.get(inbox_item.object_id).json()
+                data.append({
+                    "type": inbox_item.object_type,
+                    "summary": f"{actor['displayName']} wants to follow {serialized_author.data['displayName']}",
+                    "actor": actor,
+                    "object": serialized_author.data
+                })
 
             elif inbox_item.object_type == 'comment':
                 inbox_comment = InboxComment.objects.get(
