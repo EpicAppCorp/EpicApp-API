@@ -35,6 +35,9 @@ class RegisterView(APIView):
         }
     )
     def post(self, request, format=None):
+        if request.data['password'] != request.data['confirmpassword']:
+            return Response(data={"passwords": "Passwords don't match"}, status=status.HTTP_400_BAD_REQUEST)
+
         author = AuthorSerializer(data=request.data)
 
         if not author.is_valid():

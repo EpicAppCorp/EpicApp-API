@@ -19,7 +19,7 @@ class AuthorSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         id = uuid.uuid4()
-        validated_data['id'] = f"{HOST}/api/authors/{id}"
+        validated_data['id'] = id
         validated_data['url'] = f"{HOST}/api/authors/{id}"
         validated_data['host'] = f"{HOST}/"
         validated_data[
@@ -27,6 +27,11 @@ class AuthorSerializer(serializers.ModelSerializer):
         # hash password
         validated_data['password'] = make_password(validated_data['password'])
         return Author.objects.create(**validated_data)
+
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        representation['id'] = f"{HOST}/api/authors/{instance.id}"
+        return representation
 
     def update(self, instance, validated_data):
         instance.displayName = validated_data.get(
@@ -50,8 +55,6 @@ class PostSerializer(serializers.ModelSerializer):
                   'published', 'visibility', 'categories', 'unlisted', 'author', 'type', 'author_id']
 
     def create(self, validated_data):
-        id = uuid.uuid4()
-        validated_data['id'] = f"{HOST}/api/authors/{validated_data['author_id']}/posts/{id}"
         return Post.objects.create(**validated_data)
 
     def update(self, instance, validated_data):
@@ -73,6 +76,11 @@ class PostSerializer(serializers.ModelSerializer):
         instance.save()
         return instance
 
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        representation['id'] = f"{HOST}/api/authors/{instance.author.id}/posts/{instance.id}"
+        return representation
+
 
 class CommentSerializer(serializers.ModelSerializer):
     type = serializers.ReadOnlyField()
@@ -86,8 +94,6 @@ class CommentSerializer(serializers.ModelSerializer):
                   'published', 'post_id', 'author', 'author_id']
 
     def create(self, validated_data):
-        id = uuid.uuid4()
-        validated_data['id'] = f"{HOST}/api/authors/{validated_data['author_id']}/posts/{validated_data['post_id']}/comments/{id}"
         return Comment.objects.create(**validated_data)
 
     def update(self, instance, validated_data):
@@ -98,6 +104,11 @@ class CommentSerializer(serializers.ModelSerializer):
             'contentType', instance.contentType)
         instance.save()
         return instance
+
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        representation['id'] = f"{HOST}/api/authors/{instance.author.id}/posts/{instance.post.id}/comments/{instance.id}"
+        return representation
 
 
 class InboxCommentSerializer(serializers.ModelSerializer):
