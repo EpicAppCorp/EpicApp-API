@@ -35,6 +35,9 @@ class RegisterView(APIView):
         }
     )
     def post(self, request, format=None):
+        if request.data['password'] != request.data['confirmpassword']:
+            return Response(data={"passwords": "Passwords don't match"}, status=status.HTTP_400_BAD_REQUEST)
+
         author = AuthorSerializer(data=request.data)
 
         if not author.is_valid():
@@ -91,7 +94,7 @@ class AuthenticateView(APIView):
         followers = Follower.objects.filter(
             author=serialized_author['id']).count()
         following = Follower.objects.filter(
-            follower=f"{HOST}/api/authors/{serialized_author['id']}").count()
+            follower=serialized_author['id']).count()
 
         # return an http only cookie, but if needed to make it easier, we can not do http only cookies so JS can use it.
         response = Response(data={**serialized_author, "followers": followers, "following": following},
