@@ -11,11 +11,11 @@ from .utils.swagger import SwaggerShape
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 
-from .models import Author, Post, Comment, Inbox, Follower, InboxComment, Like
+from .models import Author, Post, Comment, Inbox, Follower, InboxComment, Like, Server
 from .config import HOST
 from .utils.path_id import get_path_id
 from .utils.auth import authenticated
-from .serializers import AuthorSerializer, PostSerializer, CommentSerializer, InboxSerializer, FollowerSerializer, InboxCommentSerializer, LikeSerializer
+from .serializers import AuthorSerializer, PostSerializer, CommentSerializer, InboxSerializer, FollowerSerializer, InboxCommentSerializer, LikeSerializer, ServerSerializer
 
 
 class RegisterView(APIView):
@@ -267,8 +267,10 @@ class PostsView(APIView):
                     return Response(data=inbox_item.errors, status=status.HTTP_400_BAD_REQUEST)
                 inbox_item.save()
             else:
+                server = Server.objects.get(
+                    url=follower_url.split('/authors/')[0])
                 requests.post(f"{follower_url}/inbox/", json=post.data,
-                              headers={"Authorization": "Basic R3JvdXAxM1VzZXI6Z3JvdXAxM2dyb3VwMTM="})
+                              headers={"Authorization": server.token})
 
         return Response(data=post.data)
 
@@ -383,8 +385,10 @@ class PostView(APIView):
                     return Response(data=inbox_item.errors, status=status.HTTP_400_BAD_REQUEST)
                 inbox_item.save()
             else:
+                server = Server.objects.get(
+                    url=follower_url.split('/authors/')[0])
                 requests.post(f"{follower_url}/inbox/", json=post.data,
-                              headers={"Authorization": "Basic test"})
+                              headers={"Authorization": server.token})
 
         return Response(data=post.data)
 

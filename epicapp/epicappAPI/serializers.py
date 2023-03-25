@@ -176,7 +176,7 @@ class FollowerSerializer(serializers.ModelSerializer):
         return Follower.objects.create(**validated_data)
 
 
-class ConnectedServerSerializer(serializers.ModelSerializer):
+class ServerSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Server

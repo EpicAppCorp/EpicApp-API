@@ -112,7 +112,6 @@ class Follower(models.Model):
 class Server(models.Model):
     url = models.TextField()
     token = models.TextField()
-    issuer = models.TextField()
 
 
 class InboxComment(models.Model):
