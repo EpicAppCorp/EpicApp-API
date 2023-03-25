@@ -560,8 +560,6 @@ class InboxView(APIView):
                 del formatted_like['id']  # not needed in final representation
                 formatted_like['summary'] = f"{formatted_like['author']['displayName']} likes your post"
 
-                print(formatted_like)
-
                 data.append(formatted_like)
 
             elif inbox_item.object_type == 'follow':
