@@ -680,6 +680,7 @@ class InboxView(APIView):
 
         elif type.upper() == "COMMENT":
             comment_data = data
+            print(comment_data)
             comment_url = comment_data['id'].split('/')
             post_id = comment_url[-3]
             comment_data["post_id"] = post_id
