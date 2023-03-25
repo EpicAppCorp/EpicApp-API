@@ -104,7 +104,7 @@ class AuthenticateView(APIView):
                             status=status.HTTP_200_OK)
 
         response.set_cookie(key='access', value=token,
-                            secure=True, httponly=True, samesite='Strict')
+                            secure=True, httponly=True, samesite='None')
 
         # this one is for dev
         # response.set_cookie(key='access', value=token,
