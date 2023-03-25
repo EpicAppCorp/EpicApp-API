@@ -268,7 +268,7 @@ class PostsView(APIView):
                 inbox_item.save()
             else:
                 requests.post(f"{follower_url}/inbox/", json=post.data,
-                              headers={"Authorization": "Basic test"})
+                              headers={"Authorization": "Basic R3JvdXAxM1VzZXI6Z3JvdXAxM2dyb3VwMTM="})
 
         return Response(data=post.data)
 
