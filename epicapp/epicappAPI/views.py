@@ -20,6 +20,8 @@ from .serializers import AuthorSerializer, PostSerializer, CommentSerializer, In
 
 class RegisterView(APIView):
     @swagger_auto_schema(
+        operation_description="Register for a local account",
+        operation_id="author_register",
         request_body=openapi.Schema(
             type=openapi.TYPE_OBJECT,
             properties={
@@ -50,6 +52,8 @@ class RegisterView(APIView):
 
 class AuthenticateView(APIView):
     @swagger_auto_schema(
+        operation_description="Authenticates an author and sets a one year cookie for all other requests",
+        operation_id="author_auth",
         request_body=openapi.Schema(
             type=openapi.TYPE_OBJECT,
             properties={
@@ -110,6 +114,8 @@ class AuthenticateView(APIView):
 
 class LogoutView(APIView):
     @swagger_auto_schema(
+        operation_description="Logouts a authenticated author by destroying the cookie",
+        operation_id="author_logout",
         responses={
             "200": openapi.Response(
                 description="OK",
@@ -125,6 +131,8 @@ class LogoutView(APIView):
 
 class AuthorDetails(APIView):
     @swagger_auto_schema(
+        operation_description="Gets the details of the currently authenticated author",
+        operation_id="author_details_local",
         responses={
             "200": openapi.Response(
                 description="OK",
@@ -149,6 +157,8 @@ class AuthorDetails(APIView):
 
 class AuthorView(APIView):
     @swagger_auto_schema(
+        operation_description="Gets the details of an author with a specified id",
+        operation_id="author_details",
         responses={
             "200": openapi.Response(
                 description="OK",
@@ -166,6 +176,8 @@ class AuthorView(APIView):
 
 class AuthorsView(APIView):
     @swagger_auto_schema(
+        operation_description="Gets the details of all authors (paginated) (default page: 1, default size: 5)",
+        operation_id="all_authors",
         responses={
             "200": openapi.Response(
                 description="OK",
@@ -189,6 +201,8 @@ class AuthorsView(APIView):
 
 class PostsView(APIView):
     @swagger_auto_schema(
+        operation_description="Get the list of posts of the author with a specified id (paginated) (default page: 1, default size: 5)",
+        operation_id="all_author_posts",
         responses={
             "200": openapi.Response(
                 description="OK",
@@ -213,6 +227,8 @@ class PostsView(APIView):
             return Response(data=f"Author with id: {author_id} does not exist", status=status.HTTP_404_NOT_FOUND)
 
     @swagger_auto_schema(
+        operation_description="Creates a post with a specified author id which is then sent to all followers of author.",
+        operation_id="create_author_post",
         request_body=openapi.Schema(
             type=openapi.TYPE_OBJECT,
             properties=SwaggerShape.post_request_body
@@ -247,8 +263,9 @@ class PostsView(APIView):
 
 
 class PostView(APIView):
-
     @swagger_auto_schema(
+        operation_description="Gets the details of a specified post. Will check the visibility of the post.",
+        operation_id="get_author_post",
         responses={
             "200": openapi.Response(
                 description="OK",
@@ -261,19 +278,13 @@ class PostView(APIView):
     )
     def get(self, request, author_id, post_id):
         try:
-            # TODO: WHY AUTHOR NOT BEING USED?
-            author = Author.objects.get(id=author_id)
             post = Post.objects.get(id=post_id)
             if post.visibility == Post.Visibility.FRIENDS:
-                # ! note: this might change depending if we store foreign authors from friend requests
                 followers_of_author = Follower.objects.filter(
-                    author=post.author.id, follower="864decb1-ed95-4c85-b189-2e5216844853")
-                # print(followers_of_author)
+                    author=post.author.id, follower=author_id)
                 if len(followers_of_author) == 0:
                     return Response(data="You don't have permission to view this post", status=status.HTTP_401_UNAUTHORIZED)
-            serialized_post = PostSerializer(post)
-
-            return Response(data=serialized_post.data)
+            return Response(data=PostSerializer(post).data)
         except Post.DoesNotExist as e:
             return Response(data="Post does not exist", status=status.HTTP_404_NOT_FOUND)
         except Author.DoesNotExist as e:
@@ -282,6 +293,8 @@ class PostView(APIView):
             return Response(data="bruh", status=status.HTTP_404_NOT_FOUND)
 
     @swagger_auto_schema(
+        operation_description="Updates an existing post",
+        operation_id="update_author_post",
         request_body=openapi.Schema(
             type=openapi.TYPE_OBJECT,
             properties=SwaggerShape.post_request_body
@@ -310,12 +323,30 @@ class PostView(APIView):
         except Post.DoesNotExist as e:
             return Response(data=e, status=status.HTTP_404_NOT_FOUND)
 
+    @swagger_auto_schema(
+        operation_description="Deletes an existing post",
+        operation_id="delete_author_post",
+        responses={
+            "200": openapi.Response(
+                description="OK",
+            )
+        }
+    )
     def delete(self, request, author_id, post_id, format=None):
         affected_rows = Post.objects.filter(id=post_id).delete()
         if affected_rows[0] == 0:
             return Response(data=f"could not delete post with id \'{post_id}\'", status=status.HTTP_404_NOT_FOUND)
         return Response(data=affected_rows[0])
 
+    @swagger_auto_schema(
+        operation_description="Creates a new post with an existing id",
+        operation_id="create_author_post_existing",
+        responses={
+            "200": openapi.Response(
+                description="OK",
+            )
+        }
+    )
     def put(self, request, author_id, post_id, format=None):
         post_data = request.data
         post_data["id"] = post_id
@@ -338,6 +369,8 @@ class PostView(APIView):
 
 class PostImageView(APIView):
     @swagger_auto_schema(
+        operation_description="Returns the image of an existing post. If no image on post, returns 404.",
+        operation_id="get_author_post_image",
         responses={
             "200": openapi.Response(
                 description="OK",
@@ -348,7 +381,6 @@ class PostImageView(APIView):
         }
     )
     def get(self, request, author_id, post_id):
-
         post = Post.objects.filter(id=post_id, author=author_id).first()
 
         if post is None:
@@ -363,6 +395,8 @@ class PostImageView(APIView):
 
 class CommentsView(APIView):
     @swagger_auto_schema(
+        operation_description="Gets the comments of a specified post (paginated) (default page: 1, default size: 5)",
+        operation_id="get_author_post_comments",
         responses={
             "200": openapi.Response(
                 description="OK",
@@ -400,6 +434,8 @@ class CommentsView(APIView):
             return Response(data=f"Post with id: {post_id} does not exist", status=status.HTTP_404_NOT_FOUND)
 
     @swagger_auto_schema(
+        operation_description="Adds a comment to a post",
+        operation_id="create_comment",
         request_body=openapi.Schema(
             type=openapi.TYPE_OBJECT,
             properties=SwaggerShape.comment_request_body
@@ -447,6 +483,8 @@ class CommentsView(APIView):
 
 class InboxView(APIView):
     @swagger_auto_schema(
+        operation_description="Gets the inbox of a specified author.",
+        operation_id="get_inbox",
         responses={
             "200": openapi.Response(
                 description="OK",
@@ -529,6 +567,8 @@ class InboxView(APIView):
         return Response(data)
 
     @swagger_auto_schema(
+        operation_description="Creates an item in the inbox for the specified author",
+        operation_id="create_inbox_item",
         request_body=openapi.Schema(
             type=openapi.TYPE_OBJECT,
             properties=SwaggerShape.follow_request_body
@@ -648,6 +688,15 @@ class InboxView(APIView):
 
             return Response(data={}, status=status.HTTP_200_OK)
 
+    @swagger_auto_schema(
+        operation_description="Deletes the entire inbox of specified author",
+        operation_id="delete_inbox",
+        responses={
+            "200": openapi.Response(
+                description="OK",
+            )
+        }
+    )
     @authenticated
     def delete(self, request, id):
         Inbox.objects.filter(author_id=id).delete()
@@ -656,6 +705,8 @@ class InboxView(APIView):
 
 class LikesView(APIView):
     @swagger_auto_schema(
+        operation_description="Gets all the likes of a specified post",
+        operation_id="get_post_likes",
         responses={
             "200": openapi.Response(
                 description="OK",
@@ -675,6 +726,8 @@ class LikesView(APIView):
 
 class CommentLikesView(APIView):
     @swagger_auto_schema(
+        operation_description="Gets all the like of a comment of a specified post",
+        operation_id="get_comment_likes",
         responses={
             "200": openapi.Response(
                 description="OK",
@@ -686,7 +739,7 @@ class CommentLikesView(APIView):
         }
     )
     def get(self, request, author_id, post_id, comment_id):
-        object = f"{HOST}/api/authors/{author_id}/posts/{post_id}"
+        object = f"{HOST}/api/authors/{author_id}/posts/{post_id}/comments/{comment_id}"
         post_likes = Like.objects.filter(object=object)
         serialized_post_like = LikeSerializer(post_likes, many=True)
         return Response(data=serialized_post_like.data)
@@ -694,6 +747,8 @@ class CommentLikesView(APIView):
 
 class LikedView(APIView):
     @swagger_auto_schema(
+        operation_description="Gets all the likes of a specified author",
+        operation_id="get_author_likes",
         responses={
             "200": openapi.Response(
                 description="OK",
@@ -705,7 +760,7 @@ class LikedView(APIView):
         }
     )
     def get(self, request, id):
-        author = f"{'http://localhost:8000'}/api/authors/{id}"
+        author = f"{HOST}/api/authors/{id}"
         liked_objects = Like.objects.filter(author=author)
 
         serialized_liked_objects = LikeSerializer(liked_objects, many=True)
@@ -721,6 +776,8 @@ class LikedView(APIView):
 
 class FollowersView(APIView):
     @swagger_auto_schema(
+        operation_description="Gets all the followers of a specified author",
+        operation_id="get_author_followers",
         responses={
             "200": openapi.Response(
                 description="OK",
@@ -752,6 +809,8 @@ class FollowersView(APIView):
 
 class FollowerView(APIView):
     @swagger_auto_schema(
+        operation_description="See if foreign_author_id follows author_id",
+        operation_id="is_following",
         responses={
             "200": openapi.Response(
                 description="OK",
@@ -777,6 +836,15 @@ class FollowerView(APIView):
         except:
             return Response(data="Error", status=status.HTTP_404_NOT_FOUND)
 
+    @swagger_auto_schema(
+        operation_description="foreign_author_id unfollows author_id",
+        operation_id="unfollow",
+        responses={
+            "200": openapi.Response(
+                description="OK",
+            )
+        }
+    )
     @authenticated
     def delete(self, request, author_id, foreign_author_id):
         Follower.objects.filter(
@@ -784,6 +852,8 @@ class FollowerView(APIView):
         return Response(f"Cleared following of author: {foreign_author_id} for author: {author_id}", status=status.HTTP_200_OK)
 
     @swagger_auto_schema(
+        operation_description="author_id accepts foreign_author_id request and now follows",
+        operation_id="follow",
         responses={
             "200": openapi.Response(
                 description="OK",
