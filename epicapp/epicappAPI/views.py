@@ -657,7 +657,7 @@ class InboxView(APIView):
 
             inbox_item.save()
 
-            return Response()
+            return Response(status=status.HTTP_200_OK)
 
         elif type.upper() == "POST":
             object_id = data["id"]
