@@ -142,10 +142,14 @@ class LikeSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         representation = super().to_representation(instance)
         representation["@context"] = "https://www.w3.org/ns/activitystreams"
-        res = requests.get(representation['author'])
-        if not res.ok:
-            raise Exception("error getting author")
-        representation['author'] = res.json()
+
+        # if url is from us, just get from models and not make another request to same server
+        if (HOST in representation['author']):
+            representation['author'] = AuthorSerializer(Author.objects.filter(
+                id=representation['author'].split('/')[-1]).first()).data
+        else:
+            representation['author'] = requests.get(
+                representation['author']).json()
         return representation
 
 

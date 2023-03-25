@@ -250,14 +250,25 @@ class PostsView(APIView):
 
         post.save()
 
-        if post.data['visibility'] == 'PUBLIC':
-            return Response(data=post.data)
+        # if post.data['visibility'] == 'PUBLIC':
+        #     return Response(data=post.data)
 
         for follower_url in Follower.objects.filter(author=author_id).values_list("follower", flat=True):
             # TODO: PROPER BASIC AUTH FROM SERVER
-            # fire and forget, if it doesn't make it to the follower oh well ¯\_(ツ)_/¯
-            requests.post(f"{follower_url}/inbox", json=post.data,
-                          headers={"Authorization": "Basic test"})
+
+            # if url is from us, just get from models and not make another request to same server
+            if (HOST in follower_url):
+                inbox_item = InboxSerializer(data={
+                    "author_id": follower_url.split('/')[-1],
+                    "object_id": post.data['id'],
+                    "object_type": "post"
+                })
+                if not inbox_item.is_valid():
+                    return Response(data=inbox_item.errors, status=status.HTTP_400_BAD_REQUEST)
+                inbox_item.save()
+            else:
+                requests.post(f"{follower_url}/inbox/", json=post.data,
+                              headers={"Authorization": "Basic test"})
 
         return Response(data=post.data)
 
@@ -360,9 +371,20 @@ class PostView(APIView):
 
         for follower_url in Follower.objects.filter(author=author_id).values_list("follower", flat=True):
             # TODO: PROPER BASIC AUTH FROM SERVER
-            # fire and forget, if it doesn't make it to the follower oh well ¯\_(ツ)_/¯
-            requests.post(f"{follower_url}/inbox", json=post.data,
-                          headers={"Authorization": "Basic test"})
+
+            # if url is from us, just get from models and not make another request to same server
+            if (HOST in follower_url):
+                inbox_item = InboxSerializer(data={
+                    "author_id": follower_url.split('/')[-1],
+                    "object_id": post.data['id'],
+                    "object_type": "post"
+                })
+                if not inbox_item.is_valid():
+                    return Response(data=inbox_item.errors, status=status.HTTP_400_BAD_REQUEST)
+                inbox_item.save()
+            else:
+                requests.post(f"{follower_url}/inbox/", json=post.data,
+                              headers={"Authorization": "Basic test"})
 
         return Response(data=post.data)
 
@@ -450,7 +472,7 @@ class CommentsView(APIView):
     def post(self, request, author_id, post_id):
         comment_data = request.data
         comment_data["post_id"] = post_id
-        comment_data["author_id"] = author_id
+        comment_data["author_id"] = comment_data["author"]['id'].split('/')[-1]
         comment = CommentSerializer(data=comment_data)
 
         if not comment.is_valid():
@@ -533,19 +555,12 @@ class InboxView(APIView):
 
                 like = Like.objects.get(id=inbox_item.object_id)
                 formatted_like = LikeSerializer(like).data
-                author = ''
-
-                # if url is from us, just get from models and not make another request to same server
-                if (HOST in like.author):
-                    author = AuthorSerializer(Author.objects.filter(
-                        id=like.author.split('/')[-1]).first()).data
-                else:
-                    author = requests.get(like.author).json()
 
                 # format stuff
                 del formatted_like['id']  # not needed in final representation
-                formatted_like['author'] = author
-                formatted_like['summary'] = f"{author['displayName']} likes your post"
+                formatted_like['summary'] = f"{formatted_like['author']['displayName']} likes your post"
+
+                print(formatted_like)
 
                 data.append(formatted_like)
 
@@ -578,6 +593,7 @@ class InboxView(APIView):
                 else:
                     author = requests.get(formatted_comment['author']).json()
 
+                formatted_comment["author"] = author
                 data.append(formatted_comment)
 
         data = {
@@ -605,7 +621,6 @@ class InboxView(APIView):
         type = data["type"]
 
         if type.upper() == "LIKE":
-            data['author_id'] = id
             url_components = data['object'].split('/')
             object_id = url_components[-1]
 
