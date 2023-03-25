@@ -558,9 +558,9 @@ class InboxView(APIView):
 
                 # format stuff
                 del formatted_like['id']  # not needed in final representation
-                formatted_like['summary'] = f"{formatted_like['author']['displayName']} likes your post"
-
-                print(formatted_like)
+                like_type = "comment" if formatted_like['object'].split(
+                    '/')[-2] == 'comments' else 'post'
+                formatted_like['summary'] = f"{formatted_like['author']['displayName']} likes your {like_type}"
 
                 data.append(formatted_like)
 
@@ -657,7 +657,7 @@ class InboxView(APIView):
 
             inbox_item.save()
 
-            return Response()
+            return Response(status=status.HTTP_200_OK)
 
         elif type.upper() == "POST":
             object_id = data["id"]
