@@ -15,7 +15,7 @@ from .models import Author, Post, Comment, Inbox, Follower, InboxComment, Like
 from .config import HOST
 from .utils.path_id import get_path_id
 from .utils.auth import authenticated
-from .serializers import AuthorSerializer, PostSerializer, CommentSerializer, InboxSerializer, FollowerSerializer, InboxCommentSerializer,  LikeSerializer
+from .serializers import AuthorSerializer, PostSerializer, CommentSerializer, InboxSerializer, FollowerSerializer, InboxCommentSerializer, LikeSerializer
 
 
 class RegisterView(APIView):
@@ -497,6 +497,7 @@ class InboxView(APIView):
     )
     def get(self, request, id):
 
+        # this part is just for unauthenticated users just to see local posts from our server
         if (id == "undefined"):
             page = int(request.GET.get('page', 1))
             size = int(request.GET.get('size', 5))
@@ -517,51 +518,71 @@ class InboxView(APIView):
         data = []
         for inbox_item in inbox_items:
             if inbox_item.object_type == 'post':
-                res = requests.get(inbox_item.object_id)
-                data.append(res.json())
+                post = ""
+
+                # if url is from us, just get from models and not make another request to same server
+                if (HOST in inbox_item.object_id):
+                    post = PostSerializer(Post.objects.filter(
+                        id=inbox_item.object_id.split('/')[-1]).first()).data
+                else:
+                    post = requests.get(inbox_item.object_id).json()
+
+                data.append(post)
 
             elif inbox_item.object_type == 'like':
 
                 like = Like.objects.get(id=inbox_item.object_id)
-                serialized_like = LikeSerializer(like)
+                formatted_like = LikeSerializer(like).data
+                author = ''
 
-                formatted_like = serialized_like.data
+                # if url is from us, just get from models and not make another request to same server
+                if (HOST in like.author):
+                    author = AuthorSerializer(Author.objects.filter(
+                        id=like.author.split('/')[-1]).first()).data
+                else:
+                    author = requests.get(like.author).json()
 
                 # format stuff
-                res = requests.get(like.author)
-                author_obj = res.json()
                 del formatted_like['id']  # not needed in final representation
-                formatted_like['author'] = author_obj
-                formatted_like['summary'] = f"{author_obj['displayName']} likes your post"
+                formatted_like['author'] = author
+                formatted_like['summary'] = f"{author['displayName']} likes your post"
 
                 data.append(formatted_like)
 
             elif inbox_item.object_type == 'follow':
-                # follow_request = FollowRequest.objects.filter(
-                #     object_id=id).first()
-                author = Author.objects.filter(id=id).first()
-                serialized_author = AuthorSerializer(author)
+                actor = ''
 
-                actor = requests.get(inbox_item.object_id).json()
+                # if url is from us, just get from models and not make another request to same server
+                if (HOST in inbox_item.object_id):
+                    actor = AuthorSerializer(Author.objects.filter(
+                        id=inbox_item.object_id.split('/')[-1]).first()).data
+                else:
+                    actor = requests.get(inbox_item.object_id).json()
+
                 data.append({
                     "type": inbox_item.object_type,
-                    "summary": f"{actor['displayName']} wants to follow {serialized_author.data['displayName']}",
+                    "summary": f"{actor['displayName']} wants to follow you",
                     "actor": actor,
-                    "object": serialized_author.data
                 })
 
             elif inbox_item.object_type == 'comment':
                 inbox_comment = InboxComment.objects.get(
                     id=inbox_item.object_id)
-                serialized_comment = InboxCommentSerializer(inbox_comment)
-                res = requests.get(serialized_comment.data['author'])
-                formatted_comment = serialized_comment.data
-                formatted_comment['author'] = res.json()
+                formatted_comment = InboxCommentSerializer(inbox_comment).data
+                author = ''
+
+                # if url is from us, just get from models and not make another request to same server
+                if (HOST in formatted_comment['author']):
+                    author = AuthorSerializer(Author.objects.filter(
+                        id=formatted_comment['author'].split('/')[-1]).first()).data
+                else:
+                    author = requests.get(formatted_comment['author']).json()
+
                 data.append(formatted_comment)
 
         data = {
             "type": "inbox",
-            "author": f"{HOST}/authors/{id}",
+            "author": f"{HOST}/api/authors/{id}",
             "items": data
         }
         return Response(data)
@@ -664,19 +685,8 @@ class InboxView(APIView):
             return Response()
 
         elif type.upper() == "FOLLOW":
-
-            # follow_request = FollowRequestSerializer(data={
-            #     "actor": new_follower,
-            #     "object_id": author_id
-            # })
-
-            # if not follow_request.is_valid():
-            #     return Response(data=follow_request.errors, status=status.HTTP_400_BAD_REQUEST)
-
-            # follow_request.save()
-
             inbox_item = InboxSerializer(data={
-                "author_id": data['object']['id'].split('/')[-1],
+                "author_id": id,
                 "object_id":  data['actor']['url'],
                 "object_type": "follow"
             })
