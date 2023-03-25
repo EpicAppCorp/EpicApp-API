@@ -33,7 +33,7 @@ DEBUG = False if env(
     "ENV") == "PROD" else True
 
 ALLOWED_HOSTS = [
-    '*'
+    'https://epic-app-git-posts-epic-app.vercel.app/'
 ]
 
 APPEND_SLASH = True
@@ -151,6 +151,6 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 AUTH_USER_MODEL = 'epicappAPI.Author'
 
-CORS_ORIGIN_ALLOW_ALL = True
+CORS_ORIGIN_ALLOW_ALL = False
 CORS_ALLOW_CREDENTIALS = True
 django_on_heroku.settings(locals())
