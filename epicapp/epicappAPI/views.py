@@ -250,14 +250,25 @@ class PostsView(APIView):
 
         post.save()
 
-        if post.data['visibility'] == 'PUBLIC':
-            return Response(data=post.data)
+        # if post.data['visibility'] == 'PUBLIC':
+        #     return Response(data=post.data)
 
         for follower_url in Follower.objects.filter(author=author_id).values_list("follower", flat=True):
             # TODO: PROPER BASIC AUTH FROM SERVER
-            # fire and forget, if it doesn't make it to the follower oh well ¯\_(ツ)_/¯
-            requests.post(f"{follower_url}/inbox", json=post.data,
-                          headers={"Authorization": "Basic test"})
+
+            # if url is from us, just get from models and not make another request to same server
+            if (HOST in follower_url):
+                inbox_item = InboxSerializer(data={
+                    "author_id": follower_url.split('/')[-1],
+                    "object_id": post.data['id'],
+                    "object_type": "post"
+                })
+                if not inbox_item.is_valid():
+                    return Response(data=inbox_item.errors, status=status.HTTP_400_BAD_REQUEST)
+                inbox_item.save()
+            else:
+                requests.post(f"{follower_url}/inbox/", json=post.data,
+                              headers={"Authorization": "Basic test"})
 
         return Response(data=post.data)
 
@@ -360,9 +371,20 @@ class PostView(APIView):
 
         for follower_url in Follower.objects.filter(author=author_id).values_list("follower", flat=True):
             # TODO: PROPER BASIC AUTH FROM SERVER
-            # fire and forget, if it doesn't make it to the follower oh well ¯\_(ツ)_/¯
-            requests.post(f"{follower_url}/inbox", json=post.data,
-                          headers={"Authorization": "Basic test"})
+
+            # if url is from us, just get from models and not make another request to same server
+            if (HOST in follower_url):
+                inbox_item = InboxSerializer(data={
+                    "author_id": follower_url.split('/')[-1],
+                    "object_id": post.data['id'],
+                    "object_type": "post"
+                })
+                if not inbox_item.is_valid():
+                    return Response(data=inbox_item.errors, status=status.HTTP_400_BAD_REQUEST)
+                inbox_item.save()
+            else:
+                requests.post(f"{follower_url}/inbox/", json=post.data,
+                              headers={"Authorization": "Basic test"})
 
         return Response(data=post.data)
 

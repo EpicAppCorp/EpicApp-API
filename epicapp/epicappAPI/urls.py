@@ -34,7 +34,7 @@ urlpatterns = [
     # followers
     path('authors/<str:author_id>/followers/',
          views.FollowersView.as_view(), name="get followers endpoint"),
-    path('authors/<str:author_id>/followers/<path:foreign_author_id>',
+    path('authors/<str:author_id>/followers/<path:foreign_author_id>/',
          views.FollowerView.as_view(), name="following endpoint"),
 
 ]
