@@ -696,7 +696,7 @@ class InboxView(APIView):
 
             inbox_item.save()
 
-            return Response(data={}, status=status.HTTP_200_OK)
+            return Response(status=status.HTTP_200_OK)
 
     @swagger_auto_schema(
         operation_description="Deletes the entire inbox of specified author",
