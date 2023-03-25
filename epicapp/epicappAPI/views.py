@@ -558,7 +558,9 @@ class InboxView(APIView):
 
                 # format stuff
                 del formatted_like['id']  # not needed in final representation
-                formatted_like['summary'] = f"{formatted_like['author']['displayName']} likes your post"
+                like_type = "comment" if formatted_like['object'].split(
+                    '/')[-2] == 'comments' else 'post'
+                formatted_like['summary'] = f"{formatted_like['author']['displayName']} likes your {like_type}"
 
                 data.append(formatted_like)
 
