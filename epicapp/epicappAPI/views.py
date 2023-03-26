@@ -682,7 +682,7 @@ class InboxView(APIView):
             comment_data = data
             comment_url = comment_data['post'].split('/')
             post_id = comment_url[-1]
-
+            print(comment_data)
             if post_id == '/':
                 comment_url.pop()
                 post_id = comment_url[-1]
