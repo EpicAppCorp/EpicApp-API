@@ -757,7 +757,7 @@ class LikesView(APIView):
             return Response(data=serialized_post_like.errors, status=status.HTTP_400_BAD_REQUEST)
 
         return Response(status=status.HTTP_200_OK)
-
+        
 
 class CommentLikesView(APIView):
     @swagger_auto_schema(
@@ -807,6 +807,25 @@ class LikedView(APIView):
         }
 
         return Response(data)
+
+
+    @authenticated
+    def post(self, request, id):
+        object = request.data['object'] # this is a URL!!
+        author = HOST + f"/api/authors/{id}"
+
+        # we save for tracking
+        serialized_post_like = LikeSerializer(data={
+            "author": author,
+            "object": object
+        })
+
+        if not serialized_post_like.is_valid():
+            return Response(data=serialized_post_like.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        serialized_post_like.save()
+        
+        return Response(status=status.HTTP_200_OK)
 
 
 class FollowersView(APIView):
