@@ -688,7 +688,7 @@ class InboxView(APIView):
                 post_id = comment_url[-1]
 
             comment_data["post_id"] = post_id
-            comment_data["author"] = '/'.join(comment_url[:-4])
+            comment_data["author"] = '/'.join(comment_url[:6])
             comment = InboxCommentSerializer(data=comment_data)
 
             if not comment.is_valid():
