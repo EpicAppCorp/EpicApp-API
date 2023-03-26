@@ -692,6 +692,7 @@ class InboxView(APIView):
             comment = InboxCommentSerializer(data=comment_data)
 
             if not comment.is_valid():
+                print(comment.errors)
                 return Response(data=comment.errors, status=status.HTTP_400_BAD_REQUEST)
 
             comment.save()
@@ -702,6 +703,7 @@ class InboxView(APIView):
                 "object_type": "comment"
             })
             if not inbox_item.is_valid():
+                print(inbox_item.errors)
                 return Response(data=inbox_item.errors, status=status.HTTP_400_BAD_REQUEST)
 
             inbox_item.save()
