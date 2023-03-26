@@ -549,7 +549,7 @@ class InboxView(APIView):
                 data.append(post)
 
             elif inbox_item.object_type == 'like':
-                
+
                 like = Like.objects.get(id=inbox_item.object_id)
                 formatted_like = LikeSerializer(like).data
 
@@ -624,7 +624,7 @@ class InboxView(APIView):
                     return Response(data="Post does not exist", status=status.HTTP_400_BAD_REQUEST)
                 except Comment.DoesNotExist:
                     return Response(data="Comment does not exist", status=status.HTTP_400_BAD_REQUEST)
-                
+
             serialized_like = LikeSerializer(
                 data={**data, 'object': data['post']})
             serialized_like.skip_representations = True
@@ -633,14 +633,14 @@ class InboxView(APIView):
                 return Response(data=serialized_like.errors, status=status.HTTP_400_BAD_REQUEST)
 
             serialized_like.save()
-
             inbox_item = InboxSerializer(data={
                 "author_id": id,
-                "object_id": data['post'],
+                "object_id": serialized_like.data['id'],
                 "object_type": "like"
             })
 
             if not inbox_item.is_valid():
+                print('inbox', inbox_item.errors)
                 return Response(data=inbox_item.errors, status=status.HTTP_400_BAD_REQUEST)
 
             inbox_item.save()
