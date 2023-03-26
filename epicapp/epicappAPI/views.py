@@ -696,7 +696,7 @@ class InboxView(APIView):
         elif type.upper() == "FOLLOW":
             inbox_item = InboxSerializer(data={
                 "author_id": id,
-                "object_id":  data['actor']['url'],
+                "object_id":  data['actor']['id'],
                 "object_type": "follow"
             })
 
