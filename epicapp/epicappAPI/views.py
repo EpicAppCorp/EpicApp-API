@@ -680,9 +680,13 @@ class InboxView(APIView):
 
         elif type.upper() == "COMMENT":
             comment_data = data
-            print(comment_data)
-            comment_url = comment_data['id'].split('/')
-            post_id = comment_url[-3]
+            comment_url = comment_data['post'].split('/')
+            post_id = comment_url[-1]
+
+            if post_id == '/':
+                comment_url.pop()
+                post_id = comment_url[-1]
+
             comment_data["post_id"] = post_id
             comment_data["author"] = '/'.join(comment_url[:-4])
             comment = InboxCommentSerializer(data=comment_data)
