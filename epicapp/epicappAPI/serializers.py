@@ -95,7 +95,6 @@ class CommentSerializer(serializers.ModelSerializer):
                   'published', 'post_id', 'author']
 
     def create(self, validated_data):
-        validated_data["id"] = f"{validated_data['author']}/posts/{validated_data['post_id']}/comments/{uuid.uuid4()}"
         return Comment.objects.create(**validated_data)
 
     def update(self, instance, validated_data):

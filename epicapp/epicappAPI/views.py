@@ -2,6 +2,7 @@ import jwt
 import datetime
 import base64
 import requests
+import uuid
 
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -475,8 +476,12 @@ class CommentsView(APIView):
     def post(self, request, author_id, post_id):
 
         comment_data = request.data
+
         comment_data["post_id"] = post_id
         comment_data["author"] = comment_data["author"]
+        comment_data["id"] = f"{comment_data['post']}/comments/{uuid.uuid4()}"
+        print(comment_data)
+
         comment = CommentSerializer(data=comment_data)
 
         if not comment.is_valid():
@@ -484,6 +489,7 @@ class CommentsView(APIView):
             return Response(data=comment.errors, status=status.HTTP_400_BAD_REQUEST)
 
         comment.save()
+
 
         inbox_item = InboxSerializer(data={
             "author_id": author_id,
