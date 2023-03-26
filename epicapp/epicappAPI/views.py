@@ -609,6 +609,7 @@ class InboxView(APIView):
         type = data["type"]
 
         if type.upper() == "LIKE":
+            print('LIKE:', data)
             url_components = data['post'].split('/')
             object_id = url_components[-1]
 
@@ -663,7 +664,7 @@ class InboxView(APIView):
             return Response(data={}, status=status.HTTP_200_OK)
 
         elif type.upper() == "COMMENT":
-
+            print('COMMENT:', data)
             comment_data = data
             comment_url = comment_data['post'].split('/')
             post_id = comment_url[-1]
