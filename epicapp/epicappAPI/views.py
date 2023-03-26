@@ -668,12 +668,13 @@ class InboxView(APIView):
             comment_url = comment_data['post'].split('/')
             post_id = comment_url[-1]
 
-            if post_id == '/':
+            if post_id == '': # check for trailing /
                 comment_url.pop()
                 post_id = comment_url[-1]
 
             comment_data["post_id"] = post_id
             comment_data["author"] = '/'.join(comment_url[:6])
+            comment_data["id"] = comment_data['post'] + f"/comments/{uuid.uuid4()}"
             comment = CommentSerializer(data=comment_data)
 
             if not comment.is_valid():
