@@ -4,7 +4,7 @@ import requests
 from rest_framework import serializers
 from django.contrib.auth.hashers import make_password
 
-from .models import Author, Post, Comment, Inbox, Follower, Server, InboxComment, Like
+from .models import Author, Post, Comment, Inbox, Follower, Like
 from .config import HOST
 
 
@@ -86,14 +86,13 @@ class PostSerializer(serializers.ModelSerializer):
 
 class CommentSerializer(serializers.ModelSerializer):
     type = serializers.ReadOnlyField()
-    author = AuthorSerializer(read_only=True)
-    author_id = serializers.CharField(write_only=True)
+    author = serializers.URLField(required=True)
     post_id = serializers.CharField(write_only=True)
 
     class Meta:
         model = Comment
         fields = ['id', 'type', 'comment', 'contentType',
-                  'published', 'post_id', 'author', 'author_id']
+                  'published', 'post_id', 'author']
 
     def create(self, validated_data):
         return Comment.objects.create(**validated_data)
@@ -109,23 +108,15 @@ class CommentSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         representation = super().to_representation(instance)
-        representation['id'] = f"{HOST}/api/authors/{instance.author.id}/posts/{instance.post.id}/comments/{instance.id}"
+
+        # if url is from us, just get from models and not make another request to same server
+        if (HOST in representation['author']):
+            representation['author'] = AuthorSerializer(Author.objects.filter(
+                id=representation['author'].split('/')[-1]).first()).data
+        else:
+            representation['author'] = requests.get(
+                representation['author']).json()
         return representation
-
-
-class InboxCommentSerializer(serializers.ModelSerializer):
-    id = serializers.URLField(required=True)
-    type = serializers.ReadOnlyField()
-    author = serializers.URLField(required=True)
-    post_id = serializers.CharField(write_only=True)
-
-    class Meta:
-        model = Comment
-        fields = ['id', 'type', 'comment', 'contentType',
-                  'published', 'post_id', 'author']
-
-    def create(self, validated_data):
-        return InboxComment.objects.create(**validated_data)
 
 
 class LikeSerializer(serializers.ModelSerializer):
@@ -174,13 +165,3 @@ class FollowerSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         return Follower.objects.create(**validated_data)
-
-
-class ServerSerializer(serializers.ModelSerializer):
-
-    class Meta:
-        model = Server
-        fields = ['url']
-
-    def create(self, validated_data):
-        return Server.objects.create(**validated_data)

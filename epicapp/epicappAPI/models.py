@@ -62,12 +62,12 @@ class Post(models.Model):
 
 class Comment(models.Model):
     type = "comment"
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    id = models.URLField(blank=False, unique=True, primary_key=True)
     comment = models.TextField(max_length=500)
     contentType = "text/markdown"  # not sure if this can be anything else
     published = models.DateTimeField(auto_now_add=True)
     post = models.ForeignKey(Post, on_delete=models.CASCADE)
-    author = models.ForeignKey(Author, on_delete=models.CASCADE)
+    author = models.URLField(blank=False, editable=False)
 
 
 class Like(models.Model):
@@ -112,13 +112,3 @@ class Follower(models.Model):
 class Server(models.Model):
     url = models.TextField()
     token = models.TextField()
-
-
-class InboxComment(models.Model):
-    type = "comment"
-    id = models.URLField(blank=False, unique=True, primary_key=True)
-    comment = models.TextField(max_length=500)
-    contentType = "text/markdown"  # not sure if this can be anything else
-    published = models.DateTimeField(auto_now_add=True)
-    post = models.ForeignKey(Post, on_delete=models.CASCADE)
-    author = models.URLField(blank=False, editable=False)
