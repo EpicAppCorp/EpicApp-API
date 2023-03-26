@@ -605,6 +605,9 @@ class InboxView(APIView):
         }
     )
     def post(self, request, id):
+        data = request.data
+        type = data["type"]
+
         if type.upper() == "LIKE":
             url_components = data['object'].split('/')
             object_id = url_components[-1]
@@ -637,7 +640,6 @@ class InboxView(APIView):
             })
 
             if not inbox_item.is_valid():
-                print('inbox', inbox_item.errors)
                 return Response(data=inbox_item.errors, status=status.HTTP_400_BAD_REQUEST)
 
             inbox_item.save()
@@ -660,22 +662,21 @@ class InboxView(APIView):
             return Response(data={}, status=status.HTTP_200_OK)
 
         elif type.upper() == "COMMENT":
-            print('COMMENT:', data)
             comment_data = data
             comment_url = comment_data['post'].split('/')
             post_id = comment_url[-1]
 
-            if post_id == '': # check for trailing /
+            if post_id == '':  # check for trailing /
                 comment_url.pop()
                 post_id = comment_url[-1]
 
             comment_data["post_id"] = post_id
             comment_data["author"] = '/'.join(comment_url[:6])
-            comment_data["id"] = comment_data['post'] + f"/comments/{uuid.uuid4()}"
+            comment_data["id"] = comment_data['post'] + \
+                f"/comments/{uuid.uuid4()}"
             comment = CommentSerializer(data=comment_data)
 
             if not comment.is_valid():
-                print('COMMENTSER:', comment.errors)
                 return Response(data=comment.errors, status=status.HTTP_400_BAD_REQUEST)
 
             comment.save()
@@ -686,7 +687,6 @@ class InboxView(APIView):
                 "object_type": "comment"
             })
             if not inbox_item.is_valid():
-                print('INBOXSER:', inbox_item.errors)
                 return Response(data=inbox_item.errors, status=status.HTTP_400_BAD_REQUEST)
 
             inbox_item.save()
@@ -742,6 +742,22 @@ class LikesView(APIView):
         serialized_post_like = LikeSerializer(post_likes, many=True)
         return Response(data=serialized_post_like.data)
 
+    @authenticated
+    def post(self, request, author_id, post_id):
+        author = HOST + f"/authors/{author_id}"
+        object = author + f"/posts/{post_id}"
+
+        # we save for tracking
+        serialized_post_like = LikeSerializer(data={
+            "author": author,
+            "object": object
+        })
+
+        if not serialized_post_like.is_valid():
+            return Response(data=serialized_post_like.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response(status=status.HTTP_200_OK)
+        
 
 class CommentLikesView(APIView):
     @swagger_auto_schema(
