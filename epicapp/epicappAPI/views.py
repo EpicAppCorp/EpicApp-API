@@ -605,9 +605,6 @@ class InboxView(APIView):
         }
     )
     def post(self, request, id):
-        data = request.data
-        type = data["type"]
-
         if type.upper() == "LIKE":
             url_components = data['object'].split('/')
             object_id = url_components[-1]
@@ -744,6 +741,22 @@ class LikesView(APIView):
         post_likes = Like.objects.filter(object=object)
         serialized_post_like = LikeSerializer(post_likes, many=True)
         return Response(data=serialized_post_like.data)
+
+    @authenticated
+    def post(self, request, author_id, post_id):
+        author = HOST + f"/authors/{author_id}"
+        object = author + f"/posts/{post_id}"
+
+        # we save for tracking
+        serialized_post_like = LikeSerializer(data={
+            "author": author,
+            "object": object
+        })
+
+        if not serialized_post_like.is_valid():
+            return Response(data=serialized_post_like.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+        return Response(status=status.HTTP_200_OK)
 
 
 class CommentLikesView(APIView):
