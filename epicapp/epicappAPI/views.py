@@ -609,8 +609,7 @@ class InboxView(APIView):
         type = data["type"]
 
         if type.upper() == "LIKE":
-            print('LIKE:', data)
-            url_components = data['post'].split('/')
+            url_components = data['object'].split('/')
             object_id = url_components[-1]
 
             if url_components[-2] == "posts":
@@ -627,7 +626,7 @@ class InboxView(APIView):
                     return Response(data="Comment does not exist", status=status.HTTP_400_BAD_REQUEST)
 
             serialized_like = LikeSerializer(
-                data={**data, 'object': data['post']})
+                data={**data, 'object': data['object']})
             serialized_like.skip_representations = True
 
             if not serialized_like.is_valid():
@@ -678,6 +677,7 @@ class InboxView(APIView):
             comment = CommentSerializer(data=comment_data)
 
             if not comment.is_valid():
+                print('COMMENTSER:', comment.errors)
                 return Response(data=comment.errors, status=status.HTTP_400_BAD_REQUEST)
 
             comment.save()
@@ -688,6 +688,7 @@ class InboxView(APIView):
                 "object_type": "comment"
             })
             if not inbox_item.is_valid():
+                print('INBOXSER:', inbox_item.errors)
                 return Response(data=inbox_item.errors, status=status.HTTP_400_BAD_REQUEST)
 
             inbox_item.save()
