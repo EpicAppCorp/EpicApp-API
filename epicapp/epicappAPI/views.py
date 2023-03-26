@@ -480,16 +480,13 @@ class CommentsView(APIView):
         comment_data["post_id"] = post_id
         comment_data["author"] = comment_data["author"]
         comment_data["id"] = f"{comment_data['post']}/comments/{uuid.uuid4()}"
-        print(comment_data)
 
         comment = CommentSerializer(data=comment_data)
 
         if not comment.is_valid():
-            print(comment.errors)
             return Response(data=comment.errors, status=status.HTTP_400_BAD_REQUEST)
 
         comment.save()
-
 
         inbox_item = InboxSerializer(data={
             "author_id": author_id,
@@ -552,7 +549,7 @@ class InboxView(APIView):
                 data.append(post)
 
             elif inbox_item.object_type == 'like':
-
+                
                 like = Like.objects.get(id=inbox_item.object_id)
                 formatted_like = LikeSerializer(like).data
 
@@ -581,20 +578,10 @@ class InboxView(APIView):
                 })
 
             elif inbox_item.object_type == 'comment':
-                print(inbox_item.object_id)
                 inbox_comment = Comment.objects.get(
                     id=inbox_item.object_id)
                 formatted_comment = CommentSerializer(inbox_comment).data
-                author = ''
 
-                # if url is from us, just get from models and not make another request to same server
-                if (HOST in formatted_comment['author']):
-                    author = AuthorSerializer(Author.objects.filter(
-                        id=formatted_comment['author'].split('/')[-1]).first()).data
-                else:
-                    author = requests.get(formatted_comment['author']).json()
-
-                formatted_comment["author"] = author
                 data.append(formatted_comment)
 
         data = {
@@ -622,7 +609,7 @@ class InboxView(APIView):
         type = data["type"]
 
         if type.upper() == "LIKE":
-            url_components = data['object'].split('/')
+            url_components = data['post'].split('/')
             object_id = url_components[-1]
 
             if url_components[-2] == "posts":
@@ -637,9 +624,9 @@ class InboxView(APIView):
                     return Response(data="Post does not exist", status=status.HTTP_400_BAD_REQUEST)
                 except Comment.DoesNotExist:
                     return Response(data="Comment does not exist", status=status.HTTP_400_BAD_REQUEST)
-
-            data['author'] = data['author']['id']
-            serialized_like = LikeSerializer(data=data)
+                
+            serialized_like = LikeSerializer(
+                data={**data, 'object': data['post']})
             serialized_like.skip_representations = True
 
             if not serialized_like.is_valid():
@@ -649,7 +636,7 @@ class InboxView(APIView):
 
             inbox_item = InboxSerializer(data={
                 "author_id": id,
-                "object_id": serialized_like.data['id'],
+                "object_id": data['post'],
                 "object_type": "like"
             })
 
@@ -690,7 +677,6 @@ class InboxView(APIView):
             comment = CommentSerializer(data=comment_data)
 
             if not comment.is_valid():
-                print(comment.errors)
                 return Response(data=comment.errors, status=status.HTTP_400_BAD_REQUEST)
 
             comment.save()
@@ -701,7 +687,6 @@ class InboxView(APIView):
                 "object_type": "comment"
             })
             if not inbox_item.is_valid():
-                print(inbox_item.errors)
                 return Response(data=inbox_item.errors, status=status.HTTP_400_BAD_REQUEST)
 
             inbox_item.save()
