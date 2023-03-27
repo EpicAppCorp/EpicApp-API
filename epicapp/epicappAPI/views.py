@@ -129,6 +129,25 @@ class LogoutView(APIView):
         return response
 
 
+class FriendsView(APIView):
+    def get(self, request, format=None):
+        authors = Author.objects.all()
+        serialized_authors = AuthorSerializer(authors, many=True)
+
+        servers = Server.objects.all()
+        friends = [*serialized_authors.data]
+        for server in servers:
+            if (server.url == 'https://t20-social-distribution.herokuapp.com/service'):
+                req = requests.get(f"{server.url}/authors",
+                                   headers={"Authorization": server.token})
+            else:
+                req = requests.get(f"{server.url}/authors/",
+                                   headers={"Authorization": server.token})
+            friends = [*friends, *req.json()["items"]]
+
+        return Response(data={"type": "friends", "items": friends})
+
+
 class AuthorDetails(APIView):
     @swagger_auto_schema(
         operation_description="Gets the details of the currently authenticated author",
@@ -694,7 +713,7 @@ class InboxView(APIView):
             return Response()
 
         elif type.upper() == "FOLLOW":
-            print(data)
+
             inbox_item = InboxSerializer(data={
                 "author_id": id,
                 "object_id":  data['actor']['url'],
@@ -758,7 +777,7 @@ class LikesView(APIView):
             return Response(data=serialized_post_like.errors, status=status.HTTP_400_BAD_REQUEST)
 
         return Response(status=status.HTTP_200_OK)
-        
+
 
 class CommentLikesView(APIView):
     @swagger_auto_schema(
@@ -809,10 +828,9 @@ class LikedView(APIView):
 
         return Response(data)
 
-
     @authenticated
     def post(self, request, id):
-        object = request.data['object'] # this is a URL!!
+        object = request.data['object']  # this is a URL!!
         author = HOST + f"/api/authors/{id}"
 
         # we save for tracking
@@ -825,7 +843,7 @@ class LikedView(APIView):
             return Response(data=serialized_post_like.errors, status=status.HTTP_400_BAD_REQUEST)
 
         serialized_post_like.save()
-        
+
         return Response(status=status.HTTP_200_OK)
 
 

@@ -12,6 +12,9 @@ urlpatterns = [
     path('authors/<str:id>/', views.AuthorView.as_view(), name='get_author'),
     path('authors/', views.AuthorsView.as_view(), name='get_authors'),
 
+    # getting all authors from all servers
+    path('friends/', views.FriendsView.as_view(), name='get_friends'),
+
     # posts
     path('authors/<str:author_id>/posts/',
          views.PostsView.as_view(), name='posts_endpoint'),
