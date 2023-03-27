@@ -384,7 +384,7 @@ class PostView(APIView):
     @swagger_auto_schema(
         operation_description="Creates a new post with an existing id",
         operation_id="create_author_post_existing",
-        operation_summary="Create a post with an existing ID", 
+        operation_summary="Create a post with an existing ID",
         responses={
             "200": openapi.Response(
                 description="OK",
@@ -702,12 +702,12 @@ class InboxView(APIView):
             comment_url = comment_data['post'].split('/')
             post_id = comment_url[-1]
 
-            if post_id == '':  # check for trailing /
+            if post_id == '/':  # check for trailing /
                 comment_url.pop()
                 post_id = comment_url[-1]
 
             comment_data["post_id"] = post_id
-            comment_data["author"] = '/'.join(comment_url[:6])
+            comment_data["author"] = '/'.join(data['author'])
             comment_data["id"] = comment_data['post'] + \
                 f"/comments/{uuid.uuid4()}"
             comment = CommentSerializer(data=comment_data)
