@@ -97,9 +97,9 @@ class AuthenticateView(APIView):
 
         # gets followers on login
         followers = Follower.objects.filter(
-            author=author.id).count()
+            author=author.id).values_list('follower', flat=True)
         following = Follower.objects.filter(
-            follower=serialized_author['id']).count()
+            follower=serialized_author['id']).values_list('author', flat=True)
 
         # return an http only cookie, but if needed to make it easier, we can not do http only cookies so JS can use it.
         response = Response(data={**serialized_author, "followers": followers, "following": following},
@@ -128,7 +128,8 @@ class LogoutView(APIView):
     def post(self, request, format=None):
         response = Response(data="Logout successful!",
                             status=status.HTTP_200_OK)
-        response.delete_cookie('access')
+        response.set_cookie('access', value='', max_age=0, path='/', secure=True,
+                            samesite='None', expires='Thu, 01-Jan-1970 00:00:00 GMT')
         return response
 
 
@@ -172,9 +173,10 @@ class AuthorDetails(APIView):
         author = Author.objects.filter(id=request._auth['id']).first()
         serialized_author = AuthorSerializer(author).data
 
-        followers = Follower.objects.filter(author=request._auth['id']).count()
+        followers = Follower.objects.filter(
+            author=request._auth['id']).values_list('follower', flat=True)
         following = Follower.objects.filter(
-            follower=serialized_author['id']).count()
+            follower=serialized_author['id']).values_list('author', flat=True)
         return Response(data={**serialized_author, "followers": followers, "following": following}, status=status.HTTP_200_OK)
 
 
@@ -959,6 +961,7 @@ class FollowerView(APIView):
     )
     @authenticated
     def put(self, request, author_id, foreign_author_id):
+        # might have to change this to a url
         follow_request = FollowerSerializer(
             data={"author": author_id, "follower": foreign_author_id})
 
