@@ -647,7 +647,6 @@ class InboxView(APIView):
         if type.upper() == "LIKE":
             url_components = data['object'].split('/')
             object_id = url_components[-1]
-            print(object_id)
             if url_components[-2] == "posts":
                 try:
                     Post.objects.get(id=object_id)
