@@ -128,7 +128,9 @@ class LogoutView(APIView):
     def post(self, request, format=None):
         response = Response(data="Logout successful!",
                             status=status.HTTP_200_OK)
-        response.delete_cookie('access')
+
+        response.set_cookie('access', value='', max_age=0, path='/',
+                            samesite='None', expires='Thu, 01-Jan-1970 00:00:00 GMT')
         return response
 
 
@@ -962,7 +964,7 @@ class FollowerView(APIView):
     )
     @authenticated
     def put(self, request, author_id, foreign_author_id):
-        # might have to change this to a url
+        # TODO: might have to change this to a url
         follow_request = FollowerSerializer(
             data={"author": author_id, "follower": foreign_author_id})
 
