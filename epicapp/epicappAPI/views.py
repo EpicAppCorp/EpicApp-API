@@ -647,7 +647,7 @@ class InboxView(APIView):
         if type.upper() == "LIKE":
             url_components = data['object'].split('/')
             object_id = url_components[-1]
-
+            print(object_id)
             if url_components[-2] == "posts":
                 try:
                     Post.objects.get(id=object_id)
@@ -655,7 +655,7 @@ class InboxView(APIView):
                     return Response(data="Post does not exist", status=status.HTTP_400_BAD_REQUEST)
             elif url_components[-2] == "comments":
                 try:
-                    Comment.objects.get(id=object_id)
+                    Comment.objects.get(id=data['object'])
                 except Post.DoesNotExist:
                     return Response(data="Post does not exist", status=status.HTTP_400_BAD_REQUEST)
                 except Comment.DoesNotExist:
@@ -695,7 +695,7 @@ class InboxView(APIView):
 
             inbox_item.save()
 
-            return Response(data={}, status=status.HTTP_200_OK)
+            return Response(status=status.HTTP_200_OK)
 
         elif type.upper() == "COMMENT":
             comment_data = data
@@ -707,7 +707,7 @@ class InboxView(APIView):
                 post_id = comment_url[-1]
 
             comment_data["post_id"] = post_id
-            comment_data["author"] = '/'.join(data['author'])
+            comment_data["author"] = data['author']
             comment_data["id"] = comment_data['post'] + \
                 f"/comments/{uuid.uuid4()}"
             comment = CommentSerializer(data=comment_data)
@@ -727,7 +727,7 @@ class InboxView(APIView):
 
             inbox_item.save()
 
-            return Response()
+            return Response(data=comment.data)
 
         elif type.upper() == "FOLLOW":
 
