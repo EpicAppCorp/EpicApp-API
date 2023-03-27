@@ -22,6 +22,7 @@ class RegisterView(APIView):
     @swagger_auto_schema(
         operation_description="Register for a local account",
         operation_id="author_register",
+        operation_summary="Register for a local account",
         request_body=openapi.Schema(
             type=openapi.TYPE_OBJECT,
             properties={
@@ -54,6 +55,7 @@ class AuthenticateView(APIView):
     @swagger_auto_schema(
         operation_description="Authenticates an author and sets a one year cookie for all other requests",
         operation_id="author_auth",
+        operation_summary="Login a user and set a cookie",
         request_body=openapi.Schema(
             type=openapi.TYPE_OBJECT,
             properties={
@@ -116,6 +118,7 @@ class LogoutView(APIView):
     @swagger_auto_schema(
         operation_description="Logouts a authenticated author by destroying the cookie",
         operation_id="author_logout",
+        operation_summary="Logout a user and destroy cookie",
         responses={
             "200": openapi.Response(
                 description="OK",
@@ -152,6 +155,7 @@ class AuthorDetails(APIView):
     @swagger_auto_schema(
         operation_description="Gets the details of the currently authenticated author",
         operation_id="author_details_local",
+        operation_summary="Get current users detail",
         responses={
             "200": openapi.Response(
                 description="OK",
@@ -178,6 +182,7 @@ class AuthorView(APIView):
     @swagger_auto_schema(
         operation_description="Gets the details of an author with a specified id",
         operation_id="author_details",
+        operation_summary="Gets the of a user by id",
         responses={
             "200": openapi.Response(
                 description="OK",
@@ -196,6 +201,7 @@ class AuthorView(APIView):
 class AuthorsView(APIView):
     @swagger_auto_schema(
         operation_description="Gets the details of all authors (paginated) (default page: 1, default size: 5)",
+        operation_summary="Get authors (paginated)",
         operation_id="all_authors",
         responses={
             "200": openapi.Response(
@@ -221,6 +227,7 @@ class AuthorsView(APIView):
 class PostsView(APIView):
     @swagger_auto_schema(
         operation_description="Get the list of posts of the author with a specified id (paginated) (default page: 1, default size: 5)",
+        operation_summary="Get list of posts (paginated)",
         operation_id="all_author_posts",
         responses={
             "200": openapi.Response(
@@ -248,6 +255,7 @@ class PostsView(APIView):
     @swagger_auto_schema(
         operation_description="Creates a post with a specified author id which is then sent to all followers of author.",
         operation_id="create_author_post",
+        operation_summary="Createa a post",
         request_body=openapi.Schema(
             type=openapi.TYPE_OBJECT,
             properties=SwaggerShape.post_request_body
@@ -297,6 +305,7 @@ class PostsView(APIView):
 class PostView(APIView):
     @swagger_auto_schema(
         operation_description="Gets the details of a specified post. Will check the visibility of the post.",
+        operation_summary="Gets details of a post",
         operation_id="get_author_post",
         responses={
             "200": openapi.Response(
@@ -327,6 +336,7 @@ class PostView(APIView):
     @swagger_auto_schema(
         operation_description="Updates an existing post",
         operation_id="update_author_post",
+        operation_summary="Update a post",
         request_body=openapi.Schema(
             type=openapi.TYPE_OBJECT,
             properties=SwaggerShape.post_request_body
@@ -358,6 +368,7 @@ class PostView(APIView):
     @swagger_auto_schema(
         operation_description="Deletes an existing post",
         operation_id="delete_author_post",
+        operation_summary="Delete a post",
         responses={
             "200": openapi.Response(
                 description="OK",
@@ -373,6 +384,7 @@ class PostView(APIView):
     @swagger_auto_schema(
         operation_description="Creates a new post with an existing id",
         operation_id="create_author_post_existing",
+        operation_summary="Create a post with an existing ID", 
         responses={
             "200": openapi.Response(
                 description="OK",
@@ -416,6 +428,7 @@ class PostImageView(APIView):
     @swagger_auto_schema(
         operation_description="Returns the image of an existing post. If no image on post, returns 404.",
         operation_id="get_author_post_image",
+        operation_summary="Get image of an existing image post",
         responses={
             "200": openapi.Response(
                 description="OK",
@@ -441,6 +454,7 @@ class PostImageView(APIView):
 class CommentsView(APIView):
     @swagger_auto_schema(
         operation_description="Gets the comments of a specified post (paginated) (default page: 1, default size: 5)",
+        operation_summary="Gets the comments of a specified post (paginated)",
         operation_id="get_author_post_comments",
         responses={
             "200": openapi.Response(
@@ -480,6 +494,7 @@ class CommentsView(APIView):
 
     @swagger_auto_schema(
         operation_description="Adds a comment to a post",
+        operation_summary="Add a comment to a post",
         operation_id="create_comment",
         request_body=openapi.Schema(
             type=openapi.TYPE_OBJECT,
@@ -522,6 +537,7 @@ class CommentsView(APIView):
 class InboxView(APIView):
     @swagger_auto_schema(
         operation_description="Gets the inbox of a specified author.",
+        operation_summary="Get inbox of an author",
         operation_id="get_inbox",
         responses={
             "200": openapi.Response(
@@ -613,6 +629,7 @@ class InboxView(APIView):
     @swagger_auto_schema(
         operation_description="Creates an item in the inbox for the specified author",
         operation_id="create_inbox_item",
+        operation_summary="Create an item in the inbox",
         request_body=openapi.Schema(
             type=openapi.TYPE_OBJECT,
             properties=SwaggerShape.follow_request_body
@@ -730,6 +747,7 @@ class InboxView(APIView):
     @swagger_auto_schema(
         operation_description="Deletes the entire inbox of specified author",
         operation_id="delete_inbox",
+        operation_summary="Clear inbox",
         responses={
             "200": openapi.Response(
                 description="OK",
@@ -746,6 +764,7 @@ class LikesView(APIView):
     @swagger_auto_schema(
         operation_description="Gets all the likes of a specified post",
         operation_id="get_post_likes",
+        operation_summary="Get all likes for a specified post",
         responses={
             "200": openapi.Response(
                 description="OK",
@@ -782,6 +801,7 @@ class LikesView(APIView):
 class CommentLikesView(APIView):
     @swagger_auto_schema(
         operation_description="Gets all the like of a comment of a specified post",
+        operation_summary="Get all likes for a specified comment",
         operation_id="get_comment_likes",
         responses={
             "200": openapi.Response(
@@ -803,6 +823,7 @@ class CommentLikesView(APIView):
 class LikedView(APIView):
     @swagger_auto_schema(
         operation_description="Gets all the likes of a specified author",
+        operation_summary="Gets all things that an author liked",
         operation_id="get_author_likes",
         responses={
             "200": openapi.Response(
@@ -850,6 +871,7 @@ class LikedView(APIView):
 class FollowersView(APIView):
     @swagger_auto_schema(
         operation_description="Gets all the followers of a specified author",
+        operation_summary="Gets the followers of an author",
         operation_id="get_author_followers",
         responses={
             "200": openapi.Response(
@@ -883,6 +905,7 @@ class FollowersView(APIView):
 class FollowerView(APIView):
     @swagger_auto_schema(
         operation_description="See if foreign_author_id follows author_id",
+        operation_summary="See if a foreign author follows one of our local ones",
         operation_id="is_following",
         responses={
             "200": openapi.Response(
@@ -912,6 +935,7 @@ class FollowerView(APIView):
     @swagger_auto_schema(
         operation_description="foreign_author_id unfollows author_id",
         operation_id="unfollow",
+        operation_summary="Foreign author unfollows author",
         responses={
             "200": openapi.Response(
                 description="OK",
@@ -926,6 +950,7 @@ class FollowerView(APIView):
 
     @swagger_auto_schema(
         operation_description="author_id accepts foreign_author_id request and now follows",
+        operation_summary="One of our local authors accepts a foreign authors request",
         operation_id="follow",
         responses={
             "200": openapi.Response(
