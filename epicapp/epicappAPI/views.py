@@ -989,6 +989,9 @@ class FollowerView(APIView):
 
     @authenticated
     def post(self, request, author_id, foreign_author_id):
+        if (Follower.objects.filter(author=foreign_author_id, follower=get_url_id(author_id)).exists()):
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        
         follow_request = FollowerSerializer(
             data={"author": foreign_author_id, "follower": get_url_id(author_id)})
 
