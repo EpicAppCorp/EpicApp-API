@@ -15,7 +15,7 @@ from drf_yasg import openapi
 from .models import Author, Post, Comment, Inbox, Follower, Like, Server
 from .config import HOST
 from .utils.auth import authenticated
-from .utils.path import get_url_id
+from .utils.path import get_url_id, get_path_id
 from .serializers import AuthorSerializer, PostSerializer, CommentSerializer, InboxSerializer, FollowerSerializer, LikeSerializer
 
 
@@ -98,7 +98,7 @@ class AuthenticateView(APIView):
 
         # gets followers on login
         followers = Follower.objects.filter(
-            author=serialized_author['id']).values_list('follower', flat=True)
+            author=serialized_author['id'], accepted=True).values_list('follower', flat=True)
         following = Follower.objects.filter(
             follower=serialized_author['id']).values_list('author', flat=True)
 
@@ -135,8 +135,9 @@ class LogoutView(APIView):
 
 
 class FriendsView(APIView):
+    @authenticated
     def get(self, request, format=None):
-        authors = Author.objects.all()
+        authors = Author.objects.exclude(id=request._auth['id']).all()
         serialized_authors = AuthorSerializer(authors, many=True)
 
         servers = Server.objects.all()
@@ -175,7 +176,7 @@ class AuthorDetails(APIView):
         serialized_author = AuthorSerializer(author).data
 
         followers = Follower.objects.filter(
-            author=serialized_author['id']).values_list('follower', flat=True)
+            author=serialized_author['id'], accepted=True).values_list('follower', flat=True)
         following = Follower.objects.filter(
             follower=serialized_author['id']).values_list('author', flat=True)
         return Response(data={**serialized_author, "followers": followers, "following": following}, status=status.HTTP_200_OK)
@@ -283,7 +284,7 @@ class PostsView(APIView):
         # if post.data['visibility'] == 'PUBLIC':
         #     return Response(data=post.data)
 
-        for follower_url in Follower.objects.filter(author=get_url_id(author_id)).values_list("follower", flat=True):
+        for follower_url in Follower.objects.filter(author=get_url_id(author_id), accepted=True).values_list("follower", flat=True):
             # if url is from us, just get from models and not make another request to same server
             if (HOST in follower_url):
                 inbox_item = InboxSerializer(data={
@@ -403,7 +404,7 @@ class PostView(APIView):
 
         post.save()
 
-        for follower_url in Follower.objects.filter(author=get_url_id(author_id)).values_list("follower", flat=True):
+        for follower_url in Follower.objects.filter(author=get_url_id(author_id), accepted=True).values_list("follower", flat=True):
             # TODO: PROPER BASIC AUTH FROM SERVER
 
             # if url is from us, just get from models and not make another request to same server
@@ -551,7 +552,6 @@ class InboxView(APIView):
         }
     )
     def get(self, request, id):
-        print(id)
         # this part is just for unauthenticated users just to see local posts from our server
         if (id == "undefined"):
             page = int(request.GET.get('page', 1))
@@ -885,7 +885,8 @@ class FollowersView(APIView):
     )
     def get(self, request, author_id):
         try:
-            followers = Follower.objects.filter(author=get_url_id(author_id))
+            followers = Follower.objects.filter(
+                author=get_url_id(author_id), accepted=True)
             serialized_followers = FollowerSerializer(followers, many=True)
             authors = Author.objects.filter(
                 id__in=[x.get('follower') for x in serialized_followers.data])
@@ -920,7 +921,7 @@ class FollowerView(APIView):
     def get(self, request, author_id, foreign_author_id):
         try:
             following = Follower.objects.filter(
-                author=get_url_id(author_id), follower=foreign_author_id).first()
+                author=get_url_id(author_id), follower=foreign_author_id, accepted=True).first()
 
         # TODO: IDK IF ACTUAL RESPONSE - JUST SENDING 404
             if (following is None):
@@ -944,9 +945,20 @@ class FollowerView(APIView):
     )
     @authenticated
     def delete(self, request, author_id, foreign_author_id):
-        Follower.objects.filter(
-            author=get_url_id(author_id), follower=foreign_author_id).delete()
-        return Response(f"Cleared following of author: {foreign_author_id} for author: {author_id}", status=status.HTTP_200_OK)
+        follower_request = Follower.objects.filter(author=get_url_id(
+            author_id), follower=foreign_author_id).first()
+
+        new_request = FollowerSerializer(follower_request).data
+        new_request['accepted'] = False
+
+        allow_follower = FollowerSerializer(
+            instance=follower_request, data=new_request, partial=True)
+
+        if not allow_follower.is_valid():
+            return Response(data=allow_follower.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        allow_follower.save()
+        return Response(data=allow_follower.data["follower"], status=status.HTTP_200_OK)
 
     @swagger_auto_schema(
         operation_description="author_id accepts foreign_author_id request and now follows",
@@ -960,12 +972,47 @@ class FollowerView(APIView):
     )
     @authenticated
     def put(self, request, author_id, foreign_author_id):
-        # might have to change this to a url
+        follower_request = Follower.objects.filter(author=get_url_id(
+            author_id), follower=foreign_author_id).first()
+
+        new_request = FollowerSerializer(follower_request).data
+        new_request['accepted'] = True
+
+        allow_follower = FollowerSerializer(
+            instance=follower_request, data=new_request, partial=True)
+
+        if not allow_follower.is_valid():
+            return Response(data=allow_follower.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        allow_follower.save()
+        return Response(data=allow_follower.data["follower"], status=status.HTTP_200_OK)
+
+    @authenticated
+    def post(self, request, author_id, foreign_author_id):
         follow_request = FollowerSerializer(
-            data={"author": get_url_id(author_id), "follower": foreign_author_id})
+            data={"author": foreign_author_id, "follower": get_url_id(author_id)})
 
         if not follow_request.is_valid():
             return Response(data=follow_request.errors, status=status.HTTP_400_BAD_REQUEST)
+        if (HOST in foreign_author_id):
+            inbox = InboxSerializer(data={
+                "author_id":  get_path_id(foreign_author_id),
+                "object_id":  get_url_id(author_id),
+                "object_type": "follow"
+            })
+
+            if not inbox.is_valid():
+                return Response(data=inbox.errors, status=status.HTTP_400_BAD_REQUEST)
+
+            inbox.save()
+        else:
+            server = Server.objects.get(
+                url=foreign_author_id.split('/authors/')[0])
+            requests.post(f"{ request.data['object']['author']['url']}/inbox", json={
+                "type": 'follow',
+                "summary": f'{request.data["actor"]["displayName"]} wants to follow {request.data["object"]["displayName"]}'
+            },
+                headers={"Authorization": server.token})
 
         follow_request.save()
-        return Response(follow_request.data, status=status.HTTP_200_OK)
+        return Response(status=status.HTTP_204_NO_CONTENT)

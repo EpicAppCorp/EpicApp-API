@@ -11,7 +11,7 @@ urlpatterns = [
             name='get_author_local'),
 
     # authors
-    re_path(r'authors/(?P<id>.+?)/?$',
+    re_path(r'authors/<str:id>/?$',
             views.AuthorView.as_view(), name='get_author'),
     re_path(r'authors/?$', views.AuthorsView.as_view(), name='get_authors'),
 
