@@ -819,7 +819,13 @@ class LikesView(APIView):
         object = f"{HOST}/api/authors/{author_id}/posts/{post_id}"
         post_likes = Like.objects.filter(object=object)
         serialized_post_like = LikeSerializer(post_likes, many=True)
-        return Response(data=serialized_post_like.data)
+
+        data = {
+            "type": "liked",
+            # TODO: find better way to combine
+            "items": serialized_post_like.data
+        }
+        return Response(data=data)
 
     @authenticated
     def post(self, request, author_id, post_id):
@@ -857,7 +863,13 @@ class CommentLikesView(APIView):
         object = f"{HOST}/api/authors/{author_id}/posts/{post_id}/comments/{comment_id}"
         post_likes = Like.objects.filter(object=object)
         serialized_post_like = LikeSerializer(post_likes, many=True)
-        return Response(data=serialized_post_like.data)
+
+        data = {
+            "type": "liked",
+            # TODO: find better way to combine
+            "items": serialized_post_like.data
+        }
+        return Response(data=data)
 
 
 class LikedView(APIView):
