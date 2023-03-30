@@ -30,6 +30,8 @@ urlpatterns = [
             views.LikesView.as_view(), name="post likes endpoint"),
     re_path(r'authors\/(?P<author_id>.+?)\/posts\/(?P<post_id>.+?)\/?$',
             views.PostView.as_view(), name='post_endpoint'),
+    re_path(r'authors\/(?P<author_id>.+?)\/repost\/?$',
+            views.RepostView.as_view(), name='repost_endpoint'),
     re_path(r'authors\/(?P<author_id>.+?)\/posts\/?$',
             views.PostsView.as_view(), name='posts_endpoint'),
 
