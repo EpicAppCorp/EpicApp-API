@@ -64,7 +64,9 @@ MIDDLEWARE = [
 ]
 
 REST_FRAMEWORK = {
-    "DEFAULT_AUTHENTICATION_CLASSES": []
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        'rest_framework.authentication.BasicAuthentication',
+    ]
 }
 
 ROOT_URLCONF = 'epicapp.urls'

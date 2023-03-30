@@ -143,12 +143,8 @@ class FriendsView(APIView):
         servers = Server.objects.all()
         friends = [*serialized_authors.data]
         for server in servers:
-            if (server.url == 'https://t20-social-distribution.herokuapp.com/service'):
-                req = requests.get(f"{server.url}/authors",
-                                   headers={"Authorization": server.token})
-            else:
-                req = requests.get(f"{server.url}/authors/",
-                                   headers={"Authorization": server.token})
+            req = requests.get(f"{server.url}/authors",
+                               headers={"Authorization": server.token})
             friends = [*friends, *req.json()["items"]]
 
         return Response(data={"type": "friends", "items": friends})
@@ -249,7 +245,7 @@ class PostsView(APIView):
             size = int(request.GET.get('size', 5))
 
             offset = (page - 1) * size
-            posts = Post.objects.filter(author_id=author_id)[
+            posts = Post.objects.filter(author_id=author_id).order_by('-published')[
                 offset:offset+size]
             serialized_posts = PostSerializer(posts, many=True)
             return Response(data={"type": "posts", "items": serialized_posts.data})
@@ -280,6 +276,16 @@ class PostsView(APIView):
             return Response(data=post.errors, status=status.HTTP_400_BAD_REQUEST)
 
         post.save()
+
+        # save to the original author
+        inbox_to_og = InboxSerializer(data={
+            "author_id": author_id,
+            "object_id": post.data['id'],
+            "object_type": "post"
+        })
+        if not inbox_to_og.is_valid():
+            return Response(data=inbox_to_og.errors, status=status.HTTP_400_BAD_REQUEST)
+        inbox_to_og.save()
 
         # if post.data['visibility'] == 'PUBLIC':
         #     return Response(data=post.data)
@@ -991,7 +997,7 @@ class FollowerView(APIView):
     def post(self, request, author_id, foreign_author_id):
         if (Follower.objects.filter(author=foreign_author_id, follower=get_url_id(author_id)).exists()):
             return Response(status=status.HTTP_204_NO_CONTENT)
-        
+
         follow_request = FollowerSerializer(
             data={"author": foreign_author_id, "follower": get_url_id(author_id)})
 
