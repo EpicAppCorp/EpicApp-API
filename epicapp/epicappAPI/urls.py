@@ -23,6 +23,8 @@ urlpatterns = [
 
     re_path(r'authors/(?P<author_id>.+?)\/posts\/(?P<post_id>.+?)\/comments\/(?P<comment_id>.+?)\/likes\/?$',
             views.CommentLikesView.as_view(), name="comments likes endpoint"),
+    re_path(r'authors/(?P<author_id>.+?)\/posts\/(?P<post_id>.+?)\/comments\/(?P<comment_id>.+?)\/?$',
+            views.CommentView.as_view(), name="comments likes endpoint"),
     re_path(r'authors/(?P<author_id>.+?)\/posts\/(?P<post_id>.+?)\/comments\/?$',
             views.CommentsView.as_view(), name="comments endpoint"),
     #     missing like for single post

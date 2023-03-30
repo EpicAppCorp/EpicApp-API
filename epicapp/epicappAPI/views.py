@@ -498,6 +498,22 @@ class PostImageView(APIView):
                         content_type=post.contentType.split(";")[0])
 
 
+class CommentView(APIView):
+    def get(self, request, author_id, post_id, comment_id):
+        print(f"{HOST}/api/authors/{author_id}/posts/{post_id}/comments/{comment_id}")
+        try:
+            comment = Comment.objects.filter(
+                post_id=post_id, id=f"{HOST}/api/authors/{author_id}/posts/{post_id}/comments/{comment_id}").first()
+            serialized_comment = CommentSerializer(comment).data
+
+            return Response(data=serialized_comment)
+
+        except Author.DoesNotExist:
+            return Response(data=f"Author with id: {author_id} does not exist", status=status.HTTP_404_NOT_FOUND)
+        except Post.DoesNotExist:
+            return Response(data=f"Post with id: {post_id} does not exist", status=status.HTTP_404_NOT_FOUND)
+
+
 class CommentsView(APIView):
     @swagger_auto_schema(
         operation_description="Gets the comments of a specified post (paginated) (default page: 1, default size: 5)",
@@ -616,7 +632,7 @@ class InboxView(APIView):
             author_id=id).order_by('-created_at')
 
         data = []
-        for inbox_item in inbox_items: 
+        for inbox_item in inbox_items:
             if inbox_item.object_type == 'post':
                 post = ""
 
@@ -705,6 +721,13 @@ class InboxView(APIView):
                     return Response(data="Post does not exist", status=status.HTTP_400_BAD_REQUEST)
                 except Comment.DoesNotExist:
                     return Response(data="Comment does not exist", status=status.HTTP_400_BAD_REQUEST)
+
+            if (HOST not in request.data['author']):
+                server = Server.objects.get(
+                    url=request.data['author'].split('/authors/')[0])
+                requests.post(f"{request.data['author']}/liked", json={
+                    "object": request.data['object'],
+                }, headers={"Authorization": server.token})
 
             serialized_like = LikeSerializer(
                 data={**data, 'object': data['object']})
@@ -893,8 +916,7 @@ class LikedView(APIView):
         }
     )
     def get(self, request, id):
-        author = f"{HOST}/api/authors/{id}"
-        liked_objects = Like.objects.filter(author=author)
+        liked_objects = Like.objects.filter(author=get_url_id(id))
 
         serialized_liked_objects = LikeSerializer(liked_objects, many=True)
 
