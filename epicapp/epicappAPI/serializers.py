@@ -55,8 +55,7 @@ class PostSerializer(serializers.ModelSerializer):
                   'published', 'visibility', 'categories', 'unlisted', 'author', 'type', 'author_id']
 
     def create(self, validated_data):
-        validated_data['source'] = HOST
-        validated_data['origin'] = HOST
+        validated_data['origin'] = f"{HOST}/api/authors/{validated_data['author_id']}"
         return Post.objects.create(**validated_data)
 
     def update(self, instance, validated_data):
