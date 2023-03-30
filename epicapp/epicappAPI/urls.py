@@ -20,6 +20,8 @@ urlpatterns = [
          views.PostsView.as_view(), name='posts_endpoint'),
     path('authors/<str:author_id>/posts/<str:post_id>/',
          views.PostView.as_view(), name='post_endpoint'),
+    path('authors/<str:author_id>/repost/',
+         views.RepostView.as_view(), name='repost_endpoint'),
     path('authors/<str:author_id>/posts/<str:post_id>/image/',
          views.PostImageView.as_view(), name='post_image_endpoint'),
     path('authors/<str:author_id>/posts/<str:post_id>/comments/',

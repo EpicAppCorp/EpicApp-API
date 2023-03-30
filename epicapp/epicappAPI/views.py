@@ -3,6 +3,7 @@ import datetime
 import base64
 import requests
 import uuid
+import json
 
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -272,6 +273,7 @@ class PostsView(APIView):
     def post(self, request, author_id):
         post_data = request.data
         post_data["author_id"] = author_id
+        post_data["source"] = f"{HOST}/api/authors/{author_id}"
         post: Post = PostSerializer(data=post_data)
 
         if not post.is_valid():
@@ -397,6 +399,7 @@ class PostView(APIView):
         post_data = request.data
         post_data["id"] = post_id
         post_data["author_id"] = author_id
+        post_data["source"] = f"{HOST}/api/authors/{author_id}"
         post = PostSerializer(data=post_data)
 
         if not post.is_valid():
@@ -424,6 +427,42 @@ class PostView(APIView):
                               headers={"Authorization": server.token})
 
         return Response(data=post.data)
+
+
+class RepostView(APIView):
+    def put(self, request, author_id):
+        post_data = request.data
+
+        del post_data['id']
+        post_data["author_id"] = post_data['author']['id'].split('/')[-1]
+        # latest source is us since we reposted it
+        post_data['source'] = f"{HOST}/api/authors/{author_id}"
+        post: Post = PostSerializer(data=post_data)
+
+        if not post.is_valid():
+            return Response(data=post.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        post.save()
+
+        for follower_url in Follower.objects.filter(author=author_id).values_list("follower", flat=True):
+            # TODO: PROPER BASIC AUTH FROM SERVER
+
+            # if url is from us, just get from models and not make another request to same server
+            if (HOST in follower_url):
+                inbox_item = InboxSerializer(data={
+                    "author_id": follower_url.split('/')[-1],
+                    "object_id": post.data['id'],
+                    "object_type": "post"
+                })
+                if not inbox_item.is_valid():
+                    return Response(data=inbox_item.errors, status=status.HTTP_400_BAD_REQUEST)
+                inbox_item.save()
+            else:
+                server = Server.objects.get(
+                    url=follower_url.split('/authors/')[0])
+                requests.post(f"{follower_url}/inbox/", json=post_data,
+                              headers={"Authorization": server.token})
+        return Response()
 
 
 class PostImageView(APIView):
@@ -572,7 +611,7 @@ class InboxView(APIView):
             author_id=id).order_by('-created_at')
 
         data = []
-        for inbox_item in inbox_items:
+        for inbox_item in inbox_items: 
             if inbox_item.object_type == 'post':
                 post = ""
 
