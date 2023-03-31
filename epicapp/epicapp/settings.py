@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/4.1/ref/settings/
 import os
 from pathlib import Path
 import django_on_heroku
+from corsheaders.defaults import default_headers
 
 import environ
 env = environ.Env()
@@ -154,4 +155,6 @@ AUTH_USER_MODEL = 'epicappAPI.Author'
 
 CORS_ORIGIN_ALLOW_ALL = True
 CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_ALL_ORIGINS=  True
+CORS_ALLOW_HEADERS = list(default_headers) + ['Set-Cookie']
 django_on_heroku.settings(locals())
