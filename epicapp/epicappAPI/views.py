@@ -666,7 +666,10 @@ class InboxView(APIView):
                     actor = AuthorSerializer(Author.objects.filter(
                         id=inbox_item.object_id.split('/')[-1]).first()).data
                 else:
-                    actor = requests.get(inbox_item.object_id).json()
+                    server = Server.objects.get(
+                        url=inbox_item.object_id.split('/authors/')[0])
+                    actor = requests.get(inbox_item.object_id,  headers={
+                                         "Authorization": server.token}).json()
 
                 data.append({
                     "type": inbox_item.object_type,
@@ -688,7 +691,7 @@ class InboxView(APIView):
         }
         return Response(data)
 
-    @swagger_auto_schema(
+    @ swagger_auto_schema(
         operation_description="Creates an item in the inbox for the specified author",
         operation_id="create_inbox_item",
         operation_summary="Create an item in the inbox",
