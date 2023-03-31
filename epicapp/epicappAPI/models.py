@@ -104,6 +104,7 @@ class Follower(models.Model):
     author = models.CharField(max_length=255,
                               default=uuid.uuid4, editable=False)
     follower = models.TextField()
+    accepted = models.BooleanField(default=False)
 
     class Meta:
         unique_together = (('author', 'follower'))

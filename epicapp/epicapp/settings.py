@@ -35,7 +35,7 @@ ALLOWED_HOSTS = [
     '*'
 ]
 
-APPEND_SLASH = True
+APPEND_SLASH = False
 # Application definition
 
 INSTALLED_APPS = [
@@ -64,7 +64,9 @@ MIDDLEWARE = [
 ]
 
 REST_FRAMEWORK = {
-    "DEFAULT_AUTHENTICATION_CLASSES": []
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        'rest_framework.authentication.BasicAuthentication',
+    ]
 }
 
 ROOT_URLCONF = 'epicapp.urls'
