@@ -153,19 +153,27 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 AUTH_USER_MODEL = 'epicappAPI.Author'
 
+
+CORS_ALLOW_HEADERS = list(default_headers) + [
+    'X-Amz-Date',
+    'Access-Control-Request-Headers',
+    'Access-Control-Allow-Headers',
+    'Access-Control-Allow-Origin',
+    'XMLHttpRequest',
+]
+CORS_EXPOSE_HEADERS = ['Content-Type', 'X-CSRFToken']
+CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",
-    "https://epic-app.vercel.app",
-    "https://group-13-epic-app.herokuapp.com",
-    "https://cmput404-group6-instatonne.herokuapp.com",
-    "https://t20-social-distribution.herokuapp.com",
-    "https://social-distribution-media.herokuapp.com",
-]
-CSRF_TRUSTED_ORIGINS = [
-    "http://localhost:3000",
-    "https://group-13-epic-app.herokuapp.com",
-]
+
+CSRF_USE_SESSIONS = False
+CSRF_COOKIE_HTTPONLY = False
+CSRF_COOKIE_SAMESITE = None
+
+SESSION_COOKIE_HTTPONLY = False
+SESSION_COOKIE_SAMESITE = None
+
+SECURE_BROWSER_XSS_FILTER = True
+SECURE_CONTENT_TYPE_NOSNIFF = True
 CSRF_COOKIE_HTTPONLY = False
 
 
