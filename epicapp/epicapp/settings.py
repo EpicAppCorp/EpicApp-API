@@ -155,6 +155,7 @@ AUTH_USER_MODEL = 'epicappAPI.Author'
 
 
 CORS_ALLOW_HEADERS = list(default_headers) + [
+    'Set-Cookie',
     'X-Amz-Date',
     'Access-Control-Request-Headers',
     'Access-Control-Allow-Headers',
@@ -162,9 +163,15 @@ CORS_ALLOW_HEADERS = list(default_headers) + [
     'XMLHttpRequest',
 ]
 CORS_EXPOSE_HEADERS = ['Content-Type', 'X-CSRFToken']
-CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_ALL_ORIGINS = False
 CORS_ALLOW_CREDENTIALS = True
-
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "https://t20-social-distribution.herokuapp.com",
+    "https://social-distribution-media.herokuapp.com",
+    "https://group-13-epic-app.herokuapp.com",
+    "https://epic-app.vercel.app",
+]
 CSRF_USE_SESSIONS = False
 CSRF_COOKIE_HTTPONLY = False
 CSRF_COOKIE_SAMESITE = None
