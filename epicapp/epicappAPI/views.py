@@ -104,27 +104,8 @@ class AuthenticateView(APIView):
             follower=serialized_author['id']).values_list('author', flat=True)
 
         # return an http only cookie, but if needed to make it easier, we can not do http only cookies so JS can use it.
-        response = Response(data={**serialized_author, "followers": followers, "following": following},
-                            status=status.HTTP_200_OK)
-
-        response.set_cookie(key='access', value=token,
-                            secure=True, samesite='None', path='/', domain='.epic-app.vercel.app')
-
-        response.set_cookie(
-            key='lol',
-            value=token,
-            expires=datetime.datetime.utcnow() + datetime.timedelta(days=365),
-            domain='.epic-app.vercel.app',
-            path='/',
-            secure=True,
-            httponly=True,
-            samesite='Lax'
-        )
-
-        # this one is for dev
-        # response.set_cookie(key='access', value=token,
-        #                     secure=False, samesite='Lax')
-        return response
+        return Response(data={**serialized_author, "followers": followers, "following": following, "cookie": token},
+                        status=status.HTTP_200_OK)
 
 
 class LogoutView(APIView):
