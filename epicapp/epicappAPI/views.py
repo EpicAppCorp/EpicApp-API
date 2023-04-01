@@ -108,7 +108,7 @@ class AuthenticateView(APIView):
                             status=status.HTTP_200_OK)
 
         response.set_cookie(key='access', value=token,
-                            secure=True, samesite='None', path='/')
+                            secure=True, samesite='None', path='/', domain='.epic-app.vercel.app')
 
         # this one is for dev
         # response.set_cookie(key='access', value=token,
