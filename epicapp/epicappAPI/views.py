@@ -110,6 +110,17 @@ class AuthenticateView(APIView):
         response.set_cookie(key='access', value=token,
                             secure=True, samesite='None', path='/', domain='.epic-app.vercel.app')
 
+        response.set_cookie(
+            key='lol',
+            value=token,
+            expires=datetime.now() + datetime.timedelta(days=365),
+            domain='.epic-app.vercel.app',
+            path='/',
+            secure=True,
+            httponly=True,
+            samesite='Lax'
+        )
+
         # this one is for dev
         # response.set_cookie(key='access', value=token,
         #                     secure=False, samesite='Lax')
