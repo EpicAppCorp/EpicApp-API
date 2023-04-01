@@ -19,7 +19,7 @@ def authenticated(func):
     def wrapper(*args, **kwargs):
         for arg in args:
             if isinstance(arg, Request):
-                token = arg.COOKIES.get('access')
+                token = arg.headers.get('Authorization')
                 try:
                     if token:
                         arg._auth = decode_token(token)
