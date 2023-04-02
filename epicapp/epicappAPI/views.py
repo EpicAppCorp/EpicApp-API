@@ -428,19 +428,11 @@ class PostView(APIView):
 
 
 class RepostView(APIView):
-    def put(self, request, author_id):
+    def post(self, request, author_id):
         post_data = request.data
 
-        del post_data['id']
-        post_data["author_id"] = post_data['author']['id'].split('/')[-1]
         # latest source is us since we reposted it
         post_data['source'] = f"{HOST}/api/authors/{author_id}"
-        post: Post = PostSerializer(data=post_data)
-
-        if not post.is_valid():
-            return Response(data=post.errors, status=status.HTTP_400_BAD_REQUEST)
-
-        post.save()
 
         for follower_url in Follower.objects.filter(author=author_id).values_list("follower", flat=True):
             # TODO: PROPER BASIC AUTH FROM SERVER
@@ -449,7 +441,7 @@ class RepostView(APIView):
             if (HOST in follower_url):
                 inbox_item = InboxSerializer(data={
                     "author_id": follower_url.split('/')[-1],
-                    "object_id": post.data['id'],
+                    "object_id": post_data['id'],
                     "object_type": "post"
                 })
                 if not inbox_item.is_valid():
@@ -633,8 +625,13 @@ class InboxView(APIView):
                     post = PostSerializer(Post.objects.filter(
                         id=inbox_item.object_id.split('/')[-1]).first()).data
                 else:
-                    post = requests.get(inbox_item.object_id).json()
+                    server = Server.objects.get(
+                        url=inbox_item.object_id.split('/authors/')[0])
+                    print(server.token, inbox_item.object_id)
+                    post = requests.get(inbox_item.object_id,  headers={
+                                        "Authorization": server.token}).json()
 
+                print(inbox_item.object_type, inbox_item.object_id, post)
                 data.append(post)
 
             elif inbox_item.object_type == 'like':
@@ -647,7 +644,7 @@ class InboxView(APIView):
                 like_type = "comment" if formatted_like['object'].split(
                     '/')[-2] == 'comments' else 'post'
                 formatted_like['summary'] = f"{formatted_like['author']['displayName']} likes your {like_type}"
-
+                print(inbox_item.object_type, inbox_item.object_id, formatted_like)
                 data.append(formatted_like)
 
             elif inbox_item.object_type == 'follow':
@@ -662,6 +659,7 @@ class InboxView(APIView):
                         url=inbox_item.object_id.split('/authors/')[0])
                     actor = requests.get(inbox_item.object_id,  headers={
                                          "Authorization": server.token}).json()
+                    print(inbox_item.object_type, inbox_item.object_id, actor)
 
                 data.append({
                     "type": inbox_item.object_type,
