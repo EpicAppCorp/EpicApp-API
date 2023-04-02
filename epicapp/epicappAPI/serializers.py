@@ -14,7 +14,7 @@ class AuthorSerializer(serializers.ModelSerializer, ):
     class Meta:
         model = Author
         fields = ['type', 'id', 'host', 'displayName',
-                  'url', 'github', 'profileImage', 'password']
+                  'url', 'github', 'profileImage', 'password', 'verified']
         extra_kwargs = {'password': {'write_only': True}}
 
     def create(self, validated_data):

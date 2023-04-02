@@ -84,6 +84,9 @@ class AuthenticateView(APIView):
         if author is None:
             return Response(data="Author not found!", status=status.HTTP_401_UNAUTHORIZED)
 
+        if not author.verified:
+            return Response(data="Author not verified by admin", status=status.HTTP_401_UNAUTHORIZED)
+
         # if hash passwords aren't the same
         if not author.check_password(request.data["password"]):
             return Response(data="Invalid credentials!", status=status.HTTP_401_UNAUTHORIZED)
