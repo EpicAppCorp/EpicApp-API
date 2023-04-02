@@ -284,8 +284,8 @@ class PostsView(APIView):
             return Response(data=inbox_to_og.errors, status=status.HTTP_400_BAD_REQUEST)
         inbox_to_og.save()
 
-        # if post.data['visibility'] == 'PUBLIC':
-        #     return Response(data=post.data)
+        if post.data['unlisted']: # no need to send to inboxes
+            return Response(data=post.data)
 
         for follower_url in Follower.objects.filter(author=get_url_id(author_id), accepted=True).values_list("follower", flat=True):
             # if url is from us, just get from models and not make another request to same server
@@ -324,6 +324,7 @@ class PostView(APIView):
     )
     def get(self, request, author_id, post_id):
         try:
+
             post = Post.objects.get(id=post_id)
             if post.visibility == Post.Visibility.FRIENDS:
                 followers_of_author = Follower.objects.filter(
@@ -407,6 +408,9 @@ class PostView(APIView):
             return Response(data=post.errors, status=status.HTTP_400_BAD_REQUEST)
 
         post.save()
+
+        if post.data['unlisted']: # no need to send to inboxes
+            return Response(data=post.data)
 
         for follower_url in Follower.objects.filter(author=get_url_id(author_id), accepted=True).values_list("follower", flat=True):
             # TODO: PROPER BASIC AUTH FROM SERVER

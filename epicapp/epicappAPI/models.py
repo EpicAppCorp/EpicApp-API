@@ -39,6 +39,7 @@ class Post(models.Model):
     class Visibility(models.TextChoices):
         PUBLIC = 'PUBLIC'
         FRIENDS = 'FRIENDS'
+
         # TODO: PRIVATE
 
     type = "post"
