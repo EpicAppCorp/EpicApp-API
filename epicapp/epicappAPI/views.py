@@ -487,7 +487,6 @@ class PostImageView(APIView):
 
 class CommentView(APIView):
     def get(self, request, author_id, post_id, comment_id):
-        print(f"{HOST}/api/authors/{author_id}/posts/{post_id}/comments/{comment_id}")
         try:
             comment = Comment.objects.filter(
                 post_id=post_id, id=f"{HOST}/api/authors/{author_id}/posts/{post_id}/comments/{comment_id}").first()
@@ -630,11 +629,9 @@ class InboxView(APIView):
                 else:
                     server = Server.objects.get(
                         url=inbox_item.object_id.split('/authors/')[0])
-                    print(server.token, inbox_item.object_id)
                     post = requests.get(inbox_item.object_id,  headers={
                                         "Authorization": server.token}).json()
 
-                print(inbox_item.object_type, inbox_item.object_id, post)
                 data.append(post)
 
             elif inbox_item.object_type == 'like':
@@ -647,7 +644,6 @@ class InboxView(APIView):
                 like_type = "comment" if formatted_like['object'].split(
                     '/')[-2] == 'comments' else 'post'
                 formatted_like['summary'] = f"{formatted_like['author']['displayName']} likes your {like_type}"
-                print(inbox_item.object_type, inbox_item.object_id, formatted_like)
                 data.append(formatted_like)
 
             elif inbox_item.object_type == 'follow':
@@ -662,7 +658,6 @@ class InboxView(APIView):
                         url=inbox_item.object_id.split('/authors/')[0])
                     actor = requests.get(inbox_item.object_id,  headers={
                                          "Authorization": server.token}).json()
-                    print(inbox_item.object_type, inbox_item.object_id, actor)
 
                 data.append({
                     "type": inbox_item.object_type,

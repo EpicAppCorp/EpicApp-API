@@ -155,6 +155,7 @@ AUTH_USER_MODEL = 'epicappAPI.Author'
 
 
 CORS_ALLOW_HEADERS = list(default_headers) + [
+    'x-access-token'
     'Set-Cookie',
     'X-Amz-Date',
     'Access-Control-Request-Headers',
