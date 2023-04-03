@@ -649,7 +649,6 @@ class InboxView(APIView):
                 else:
                     server = Server.objects.get(
                         url=inbox_item.object_id.split('/authors/')[0])
-
                     post = requests.get(inbox_item.object_id,  headers={
                                         "Authorization": server.token}).json()
 
@@ -665,7 +664,6 @@ class InboxView(APIView):
                 like_type = "comment" if formatted_like['object'].split(
                     '/')[-2] == 'comments' else 'post'
                 formatted_like['summary'] = f"{formatted_like['author']['displayName']} likes your {like_type}"
-                
                 data.append(formatted_like)
 
             elif inbox_item.object_type == 'follow':
