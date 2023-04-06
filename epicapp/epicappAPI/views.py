@@ -3,7 +3,6 @@ import datetime
 import base64
 import requests
 import uuid
-import json
 
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -15,7 +14,7 @@ from drf_yasg import openapi
 
 from .models import Author, Post, Comment, Inbox, Follower, Like, Server
 from .config import HOST
-from .utils.auth import authenticated
+from .utils.auth import authenticated, decode_token
 from .utils.path import get_url_id, get_path_id
 from .serializers import AuthorSerializer, PostSerializer, CommentSerializer, InboxSerializer, FollowerSerializer, LikeSerializer
 
@@ -237,12 +236,29 @@ class PostsView(APIView):
     )
     def get(self, request, author_id):
         try:
+            posts = None
             page = int(request.GET.get('page', 1))
             size = int(request.GET.get('size', 5))
 
             offset = (page - 1) * size
-            posts = Post.objects.filter(author_id=author_id).order_by('-published')[
-                offset:offset+size]
+
+            auth_user = decode_token(request.headers.get(
+                'Authorization')) if request.headers.get('Authorization') else None
+
+            # if logged in, get all posts
+            if auth_user and auth_user['id'] == author_id:
+                posts = Post.objects.filter(author_id=author_id).order_by('-published')[
+                    offset:offset+size]
+            # if is a friend, show friends only post also.
+            elif auth_user and Follower.objects.filter(author=get_url_id(author_id), follower=get_url_id(auth_user['id'])).exists():
+                posts = Post.objects.filter(author_id=author_id, unlisted=False).order_by('-published')[
+                    offset:offset+size]
+            else:
+                posts = Post.objects.filter(author_id=author_id, visibility=Post.Visibility.PUBLIC, unlisted=False).order_by('-published')[
+                    offset:offset+size]
+
+            # otherwise get only public posts of that author
+
             serialized_posts = PostSerializer(posts, many=True)
             return Response(data={"type": "posts", "items": serialized_posts.data})
         except Author.DoesNotExist:
@@ -284,7 +300,7 @@ class PostsView(APIView):
             return Response(data=inbox_to_og.errors, status=status.HTTP_400_BAD_REQUEST)
         inbox_to_og.save()
 
-        if post.data['unlisted']: # no need to send to inboxes
+        if post.data['unlisted']:  # no need to send to inboxes
             return Response(data=post.data)
 
         for follower_url in Follower.objects.filter(author=get_url_id(author_id), accepted=True).values_list("follower", flat=True):
@@ -323,14 +339,23 @@ class PostView(APIView):
         }
     )
     def get(self, request, author_id, post_id):
-        try:
 
+        # get logged user
+        auth_user = decode_token(request.headers.get(
+            'Authorization')) if request.headers.get('Authorization') else None
+
+        try:
+            # get post
             post = Post.objects.get(id=post_id)
-            if post.visibility == Post.Visibility.FRIENDS:
-                followers_of_author = Follower.objects.filter(
-                    author=post.author.id, follower=author_id)
-                if len(followers_of_author) == 0:
-                    return Response(data="You don't have permission to view this post", status=status.HTTP_401_UNAUTHORIZED)
+            if auth_user and auth_user['id'] == author_id:
+                return Response(data=PostSerializer(post).data)
+            
+            elif post.visibility == Post.Visibility.FRIENDS:
+                if (auth_user and Follower.objects.filter(
+                        author=get_url_id(post.author.id), follower=get_url_id(auth_user['id'])).exists()):
+                    return Response(data=PostSerializer(post).data)
+                return Response(data="You don't have permission to view this post", status=status.HTTP_401_UNAUTHORIZED)
+            
             return Response(data=PostSerializer(post).data)
         except Post.DoesNotExist as e:
             return Response(data="Post does not exist", status=status.HTTP_404_NOT_FOUND)
@@ -409,7 +434,7 @@ class PostView(APIView):
 
         post.save()
 
-        if post.data['unlisted']: # no need to send to inboxes
+        if post.data['unlisted']:  # no need to send to inboxes
             return Response(data=post.data)
 
         for follower_url in Follower.objects.filter(author=get_url_id(author_id), accepted=True).values_list("follower", flat=True):
@@ -1039,20 +1064,13 @@ class FollowerView(APIView):
     )
     @authenticated
     def delete(self, request, author_id, foreign_author_id):
-        follower_request = Follower.objects.filter(author=get_url_id(
-            author_id), follower=foreign_author_id).first()
+        Follower.objects.filter(author=get_url_id(
+            author_id), follower=foreign_author_id).delete()
 
-        new_request = FollowerSerializer(follower_request).data
-        new_request['accepted'] = False
+        Inbox.objects.filter(
+            author_id=author_id, object_id=foreign_author_id, object_type="follow").delete()
 
-        allow_follower = FollowerSerializer(
-            instance=follower_request, data=new_request, partial=True)
-
-        if not allow_follower.is_valid():
-            return Response(data=allow_follower.errors, status=status.HTTP_400_BAD_REQUEST)
-
-        allow_follower.save()
-        return Response(data=allow_follower.data["follower"], status=status.HTTP_200_OK)
+        return Response(status=status.HTTP_200_OK)
 
     @swagger_auto_schema(
         operation_description="author_id accepts foreign_author_id request and now follows",
