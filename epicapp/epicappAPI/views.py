@@ -1130,9 +1130,12 @@ class FollowerView(APIView):
         else:
             server = Server.objects.get(
                 url=foreign_author_id.split('/authors/')[0])
-            requests.post(f"{ request.data['object']['author']['url']}/inbox", json={
+            requests.post(f"{ request.data['object']['url']}/inbox", json={
                 "type": 'follow',
-                "summary": f'{request.data["actor"]["displayName"]} wants to follow {request.data["object"]["displayName"]}'
+                "summary": f'{request.data["actor"]["displayName"]} wants to follow {request.data["object"]["displayName"]}',
+                "actor": {
+                    "id": f"{HOST}/api/authors/{author_id}"
+                }
             },
                 headers={"Authorization": server.token})
 
