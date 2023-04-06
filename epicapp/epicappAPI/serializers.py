@@ -91,7 +91,7 @@ class CommentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Comment
         fields = ['id', 'type', 'comment', 'contentType',
-                  'published', 'post_id', 'author']
+                  'published', 'post_id', 'author', 'public']
 
     def create(self, validated_data):
         return Comment.objects.create(**validated_data)
@@ -107,7 +107,7 @@ class CommentSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         representation = super().to_representation(instance)
-
+        del representation['public']
         # if url is from us, just get from models and not make another request to same server
         if (HOST in representation['author']):
             representation['author'] = AuthorSerializer(Author.objects.filter(

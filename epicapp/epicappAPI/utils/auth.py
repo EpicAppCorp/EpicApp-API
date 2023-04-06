@@ -6,7 +6,7 @@ from rest_framework.request import Request
 
 def decode_token(token):
     if token is None:
-        raise UnauthenticatedError("Unauthenticated!")
+        return None
     try:
         return jwt.decode(token, 'SECRET_NOT_USING_ENV_CAUSE_WHO_CARES', algorithms=['HS256'])
     except jwt.InvalidSignatureError:

@@ -38,8 +38,8 @@ urlpatterns = [
             views.PostsView.as_view(), name='posts_endpoint'),
 
     # followers
-    path('authors/<str:author_id>/followers/<path:foreign_author_id>',
-         views.FollowerView.as_view(), name="following endpoint"),
+    re_path(r'authors\/(?P<author_id>.+?)\/followers\/(?P<foreign_author_id>.+?)\/?$',
+            views.FollowerView.as_view(), name="following endpoint"),
     re_path(r'authors\/(?P<author_id>.+?)\/followers\/?$',
             views.FollowersView.as_view(), name="get followers endpoint"),
     # authors
