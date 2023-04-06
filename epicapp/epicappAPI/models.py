@@ -70,6 +70,7 @@ class Comment(models.Model):
     published = models.DateTimeField(auto_now_add=True)
     post = models.ForeignKey(Post, on_delete=models.CASCADE)
     author = models.URLField(blank=False, editable=False)
+    public = models.BooleanField(default=True)
 
 
 class Like(models.Model):

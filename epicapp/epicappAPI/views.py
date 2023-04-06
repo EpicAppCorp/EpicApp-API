@@ -349,13 +349,13 @@ class PostView(APIView):
             post = Post.objects.get(id=post_id)
             if auth_user and auth_user['id'] == author_id:
                 return Response(data=PostSerializer(post).data)
-            
+
             elif post.visibility == Post.Visibility.FRIENDS:
                 if (auth_user and Follower.objects.filter(
                         author=get_url_id(post.author.id), follower=get_url_id(auth_user['id'])).exists()):
                     return Response(data=PostSerializer(post).data)
                 return Response(data="You don't have permission to view this post", status=status.HTTP_401_UNAUTHORIZED)
-            
+
             return Response(data=PostSerializer(post).data)
         except Post.DoesNotExist as e:
             return Response(data="Post does not exist", status=status.HTTP_404_NOT_FOUND)
@@ -570,7 +570,7 @@ class CommentsView(APIView):
             size = int(request.GET.get('size', 5))
 
             offset = (page - 1) * size
-            comments = Comment.objects.filter(post_id=post_id)[
+            comments = Comment.objects.filter(post_id=post_id, public=True)[
                 offset:offset+size]
             serialized_comments = CommentSerializer(comments, many=True)
 
@@ -728,7 +728,7 @@ class InboxView(APIView):
         }
         return Response(data)
 
-    @ swagger_auto_schema(
+    @swagger_auto_schema(
         operation_description="Creates an item in the inbox for the specified author",
         operation_id="create_inbox_item",
         operation_summary="Create an item in the inbox",
@@ -818,6 +818,13 @@ class InboxView(APIView):
             comment_data["author"] = data['author']
             comment_data["id"] = comment_data['post'] + \
                 f"/comments/{uuid.uuid4()}"
+
+            post = Post.objects.get(id=post_id)
+
+            # dont save omments if friends only post.
+            if (post.visibility == Post.Visibility.FRIENDS):
+                comment_data["public"] = False
+
             comment = CommentSerializer(data=comment_data)
 
             if not comment.is_valid():
@@ -827,7 +834,7 @@ class InboxView(APIView):
 
             inbox_item = InboxSerializer(data={
                 "author_id": id,
-                "object_id": comment.data['id'],
+                "object_id": comment_data["id"],
                 "object_type": "comment"
             })
             if not inbox_item.is_valid():
@@ -835,7 +842,7 @@ class InboxView(APIView):
 
             inbox_item.save()
 
-            return Response(data=comment.data)
+            return Response(data=comment.data, status=status.HTTP_200_OK)
 
         elif type.upper() == "FOLLOW":
 
