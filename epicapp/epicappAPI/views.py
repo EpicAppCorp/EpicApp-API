@@ -172,6 +172,19 @@ class AuthorDetails(APIView):
             follower=serialized_author['id']).values_list('author', flat=True)
         return Response(data={**serialized_author, "followers": followers, "following": following}, status=status.HTTP_200_OK)
 
+    @authenticated
+    def put(self, request):
+        author = Author.objects.filter(id=request._auth['id']).first()
+        author_data = request.data
+        updated_author = AuthorSerializer(
+            instance=author, data=author_data, partial=True)
+
+        if not updated_author.is_valid():
+            return Response(data=updated_author.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        updated_author.save()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
 
 class AuthorView(APIView):
     @swagger_auto_schema(
@@ -690,7 +703,8 @@ class InboxView(APIView):
                     formatted_like = LikeSerializer(like).data
 
                     # format stuff
-                    del formatted_like['id']  # not needed in final representation
+                    # not needed in final representation
+                    del formatted_like['id']
                     like_type = "comment" if formatted_like['object'].split(
                         '/')[-2] == 'comments' else 'post'
                     formatted_like['summary'] = f"{formatted_like['author']['displayName']} likes your {like_type}"
@@ -707,7 +721,7 @@ class InboxView(APIView):
                         server = Server.objects.get(
                             url=inbox_item.object_id.split('/authors/')[0])
                         actor = requests.get(inbox_item.object_id,  headers={
-                                            "Authorization": server.token}).json()
+                            "Authorization": server.token}).json()
 
                     data.append({
                         "type": inbox_item.object_type,
@@ -722,7 +736,7 @@ class InboxView(APIView):
 
                     data.append(formatted_comment)
 
-            except Exception: # just catch everything
+            except Exception:  # just catch everything
                 continue
 
         data = {
