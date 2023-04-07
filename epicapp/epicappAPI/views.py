@@ -668,58 +668,62 @@ class InboxView(APIView):
 
         data = []
         for inbox_item in inbox_items:
-            if inbox_item.object_type == 'post':
-                post = ""
+            try:
+                if inbox_item.object_type == 'post':
+                    post = ""
 
-                # if url is from us, just get from models and not make another request to same server
-                if (HOST in inbox_item.object_id):
-                    post = PostSerializer(Post.objects.filter(
-                        id=inbox_item.object_id.split('/')[-1]).first()).data
-                else:
-                    server = Server.objects.get(
-                        url=inbox_item.object_id.split('/authors/')[0])
-                    post = requests.get(inbox_item.object_id,  headers={
-                                        "Authorization": server.token}).json()
+                    # if url is from us, just get from models and not make another request to same server
+                    if (HOST in inbox_item.object_id):
+                        post = PostSerializer(Post.objects.filter(
+                            id=inbox_item.object_id.split('/')[-1]).first()).data
+                    else:
+                        server = Server.objects.get(
+                            url=inbox_item.object_id.split('/authors/')[0])
+                        post = requests.get(inbox_item.object_id,  headers={
+                                            "Authorization": server.token}).json()
 
-                data.append(post)
+                    data.append(post)
 
-            elif inbox_item.object_type == 'like':
+                elif inbox_item.object_type == 'like':
 
-                like = Like.objects.get(id=inbox_item.object_id)
-                formatted_like = LikeSerializer(like).data
+                    like = Like.objects.get(id=inbox_item.object_id)
+                    formatted_like = LikeSerializer(like).data
 
-                # format stuff
-                del formatted_like['id']  # not needed in final representation
-                like_type = "comment" if formatted_like['object'].split(
-                    '/')[-2] == 'comments' else 'post'
-                formatted_like['summary'] = f"{formatted_like['author']['displayName']} likes your {like_type}"
-                data.append(formatted_like)
+                    # format stuff
+                    del formatted_like['id']  # not needed in final representation
+                    like_type = "comment" if formatted_like['object'].split(
+                        '/')[-2] == 'comments' else 'post'
+                    formatted_like['summary'] = f"{formatted_like['author']['displayName']} likes your {like_type}"
+                    data.append(formatted_like)
 
-            elif inbox_item.object_type == 'follow':
-                actor = ''
+                elif inbox_item.object_type == 'follow':
+                    actor = ''
 
-                # if url is from us, just get from models and not make another request to same server
-                if (HOST in inbox_item.object_id):
-                    actor = AuthorSerializer(Author.objects.filter(
-                        id=inbox_item.object_id.split('/')[-1]).first()).data
-                else:
-                    server = Server.objects.get(
-                        url=inbox_item.object_id.split('/authors/')[0])
-                    actor = requests.get(inbox_item.object_id,  headers={
-                                         "Authorization": server.token}).json()
+                    # if url is from us, just get from models and not make another request to same server
+                    if (HOST in inbox_item.object_id):
+                        actor = AuthorSerializer(Author.objects.filter(
+                            id=inbox_item.object_id.split('/')[-1]).first()).data
+                    else:
+                        server = Server.objects.get(
+                            url=inbox_item.object_id.split('/authors/')[0])
+                        actor = requests.get(inbox_item.object_id,  headers={
+                                            "Authorization": server.token}).json()
 
-                data.append({
-                    "type": inbox_item.object_type,
-                    "summary": f"{actor['displayName']} wants to follow you",
-                    "actor": actor,
-                })
+                    data.append({
+                        "type": inbox_item.object_type,
+                        "summary": f"{actor['displayName']} wants to follow you",
+                        "actor": actor,
+                    })
 
-            elif inbox_item.object_type == 'comment':
-                inbox_comment = Comment.objects.get(
-                    id=inbox_item.object_id)
-                formatted_comment = CommentSerializer(inbox_comment).data
+                elif inbox_item.object_type == 'comment':
+                    inbox_comment = Comment.objects.get(
+                        id=inbox_item.object_id)
+                    formatted_comment = CommentSerializer(inbox_comment).data
 
-                data.append(formatted_comment)
+                    data.append(formatted_comment)
+
+            except Exception: # just catch everything
+                continue
 
         data = {
             "type": "inbox",
