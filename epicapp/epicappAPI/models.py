@@ -15,7 +15,7 @@ class Author(AbstractUser):
     password = models.CharField(max_length=255)
     github = models.URLField(unique=True)
     profileImage = models.TextField()
-    verified = models.BooleanField(default=False)
+    verified = models.BooleanField(default=True)
 
     # remove unused fields inherited from AbstractUser
     email = None
