@@ -135,15 +135,15 @@ class FriendsView(APIView):
         authors = Author.objects.exclude(id=request._auth['id']).all()
         serialized_authors = AuthorSerializer(authors, many=True)
 
-        servers = Server.objects.all()
+        # servers = Server.objects.all()
         friends = [*serialized_authors.data]
-        for server in servers:
-            try:
-                req = requests.get(f"{server.url}/authors",
-                                   headers={"Authorization": server.token})
-                friends = [*friends, *req.json()["items"]]
-            except:
-                continue
+        # for server in servers:
+        #     try:
+        #         req = requests.get(f"{server.url}/authors",
+        #                            headers={"Authorization": server.token})
+        #         friends = [*friends, *req.json()["items"]]
+        #     except:
+        #         continue
 
         return Response(data={"type": "friends", "items": friends})
 
